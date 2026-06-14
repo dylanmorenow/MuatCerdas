@@ -1,0 +1,4 @@
+id,category,model,tareKg,ratedPayloadKg,tiresCount,tireModel,tirePriceIdr,kmPerYear
+HT-IMP-01,haul_truck,Scania R580,9500,34000,10,Bridgestone M840,20000000,100000
+HT-IMP-02,haul_truck,Volvo FH16 6x4T,9800,33000,10,Michelin X Multi D,20000000,100000
+HD-IMP-01,pit_dumper,Komatsu HD785-7,75000,91000,6,,,

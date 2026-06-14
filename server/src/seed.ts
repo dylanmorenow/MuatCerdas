@@ -1,0 +1,330 @@
+// Seed data realistis & DETERMINISTIK (FR-0002-2 / SR-2, TECH_DESIGN §6).
+// Pemetaan unit ditegakkan: ban = Scania/Volvo (haul_truck, Modul A); payload = HD785
+// (pit_dumper, Modul B). JANGAN tertukar. Reproducible: PRNG seed tetap + SEED_TODAY tetap.
+//
+// Jalankan: npm run db:seed -w @muatcerdas/server  (atau via db:setup).
+
+import { defaultCostParams, classifyPayload } from "@muatcerdas/shared";
+import { prisma } from "./db";
+import { Rng, daysBefore, clamp } from "./lib/random";
+
+const SEED = 20_260_614;
+const SEED_TODAY = new Date("2026-06-14T00:00:00.000Z");
+const HD785_TARGET_KG = 91_000;
+
+const rng = new Rng(SEED);
+
+// — Master: model truk hauling (Modul A) —
+const HAUL_MODELS = [
+  { model: "Scania P410", brandBase: 0, tareKg: 9_000, ratedPayloadKg: 30_000, tireModel: "Michelin X Works Z" },
+  { model: "Scania R580", brandBase: 2_000, tareKg: 9_500, ratedPayloadKg: 34_000, tireModel: "Bridgestone M840" },
+  { model: "Volvo FH16 6x4T", brandBase: 6_000, tareKg: 9_800, ratedPayloadKg: 33_000, tireModel: "Michelin X Multi D" },
+  { model: "Scania 620 XT", brandBase: 4_000, tareKg: 10_000, ratedPayloadKg: 35_000, tireModel: "Bridgestone L355" },
+] as const;
+
+const TIRE_POSITIONS = [
+  "FL", "FR", "D1L-O", "D1L-I", "D1R-O", "D1R-I", "D2L-O", "D2L-I", "D2R-O", "D2R-I",
+] as const;
+
+const REMOVAL_REASONS = ["worn", "worn", "worn", "worn", "cut", "overload", "scheduled"] as const;
+
+const OPERATOR_NAMES = [
+  "Budi Santoso", "Agus Pratama", "Slamet Riyadi", "Eko Wibowo",
+  "Dedi Kurniawan", "Joko Susilo", "Rudi Hartono", "Bambang Setiawan",
+] as const;
+
+// Rute CPP KM33 → Jetty (~35 km), mayoritas laterit.
+const SEGMENTS = [
+  { id: "SEG-1", name: "CPP KM33 – Simpang", surface: "laterite", lengthKm: 8, conditionScore: 0.45, loaded: 25, empty: 40 },
+  { id: "SEG-2", name: "Tanjakan Laterit", surface: "laterite", lengthKm: 6, conditionScore: 0.35, loaded: 18, empty: 35 },
+  { id: "SEG-3", name: "Jalan Batu", surface: "rock", lengthKm: 7, conditionScore: 0.6, loaded: 28, empty: 45 },
+  { id: "SEG-4", name: "Laterit Basah", surface: "laterite", lengthKm: 9, conditionScore: 0.4, loaded: 22, empty: 38 },
+  { id: "SEG-5", name: "Aspal Jetty", surface: "sealed", lengthKm: 5, conditionScore: 0.85, loaded: 35, empty: 55 },
+] as const;
+
+const ROUTE_KM = SEGMENTS.reduce((s, x) => s + x.lengthKm, 0);
+// Keburukan jalan rute terbobot panjang: Σ len*(1-cond)/Σlen.
+const ROUTE_BADNESS =
+  SEGMENTS.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / ROUTE_KM;
+
+/** "Umur sebenarnya" ban (km) sebagai fungsi kondisi — generator data latih §12.1. */
+function trueLifeKm(
+  brandBase: number,
+  pressureDev: number,
+  roadBadness: number,
+  loadIdx: number,
+  operatorFactor: number,
+): number {
+  return (
+    118_000 -
+    1_200 * pressureDev -
+    30_000 * roadBadness -
+    20_000 * Math.max(0, loadIdx - 0.9) -
+    22_000 * operatorFactor +
+    brandBase
+  );
+}
+
+type Row = Record<string, unknown>;
+
+async function insertChunked<T extends Row>(
+  rows: T[],
+  fn: (chunk: T[]) => Promise<unknown>,
+  size = 500,
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += size) {
+    await fn(rows.slice(i, i + size));
+  }
+}
+
+async function resetTables(): Promise<void> {
+  // Urutan: anak → induk (hormati FK).
+  await prisma.tripSegmentExposure.deleteMany();
+  await prisma.tripLog.deleteMany();
+  await prisma.tireRecord.deleteMany();
+  await prisma.payloadEvent.deleteMany();
+  await prisma.calibrationRecord.deleteMany();
+  await prisma.unit.deleteMany();
+  await prisma.operator.deleteMany();
+  await prisma.roadSegment.deleteMany();
+  await prisma.costParams.deleteMany();
+}
+
+async function main(): Promise<void> {
+  await resetTables();
+
+  // — Operator (latent aggressiveness untuk variasi keausan/overload) —
+  const operators = OPERATOR_NAMES.map((name, i) => ({
+    id: `OP-${String(i + 1).padStart(2, "0")}`,
+    name,
+    shift: i % 2 === 0 ? "day" : "night",
+    aggr: clamp(rng.range(0.1, 0.9), 0, 1), // latent, tak disimpan
+  }));
+  await prisma.operator.createMany({
+    data: operators.map((o) => ({ id: o.id, name: o.name, shift: o.shift })),
+  });
+
+  // — RoadSegment —
+  await prisma.roadSegment.createMany({
+    data: SEGMENTS.map((s) => ({
+      id: s.id,
+      name: s.name,
+      surface: s.surface,
+      lengthKm: s.lengthKm,
+      conditionScore: s.conditionScore,
+      avgSpeedLoadedKmh: s.loaded,
+      avgSpeedEmptyKmh: s.empty,
+    })),
+  });
+
+  // — Unit: 30 haul_truck (Modul A) + 12 HD785 (Modul B) —
+  const HAUL_COUNT = 30;
+  const HD785_COUNT = 12;
+
+  interface HaulTruck {
+    id: string;
+    model: (typeof HAUL_MODELS)[number];
+    pressureBase: number;
+    loadIndex: number;
+    operatorFactor: number;
+    tirePriceIdr: number;
+  }
+
+  const haulTrucks: HaulTruck[] = [];
+  const unitRows: Row[] = [];
+
+  for (let i = 0; i < HAUL_COUNT; i++) {
+    const model = HAUL_MODELS[i % HAUL_MODELS.length]!;
+    const id = `HT-${String(i + 1).padStart(2, "0")}`;
+    const pressureBase = clamp(rng.range(1, 16), 0, 30); // truk terawat vs buruk
+    const loadIndex = clamp(rng.gaussian(0.95, 0.08), 0.78, 1.18);
+    const operatorFactor = rng.pick(operators).aggr;
+    const tirePriceIdr = 20_000_000;
+    haulTrucks.push({ id, model, pressureBase, loadIndex, operatorFactor, tirePriceIdr });
+    unitRows.push({
+      id,
+      category: "haul_truck",
+      model: model.model,
+      tareKg: model.tareKg,
+      ratedPayloadKg: model.ratedPayloadKg,
+      tiresCount: 10,
+      tireModel: model.tireModel,
+      tirePriceIdr,
+      kmPerYear: 100_000,
+    });
+  }
+
+  interface Dumper {
+    id: string;
+    meanFactor: number;
+    stdevKg: number;
+  }
+  const dumpers: Dumper[] = [];
+  for (let i = 0; i < HD785_COUNT; i++) {
+    const id = `HD-${String(i + 1).padStart(2, "0")}`;
+    dumpers.push({
+      id,
+      meanFactor: rng.range(0.97, 1.06), // sebagian cenderung under, sebagian over
+      stdevKg: rng.range(4_000, 7_000),
+    });
+    unitRows.push({
+      id,
+      category: "pit_dumper",
+      model: "Komatsu HD785-7",
+      tareKg: 75_000,
+      ratedPayloadKg: HD785_TARGET_KG,
+      tiresCount: 6,
+      tireModel: null,
+      tirePriceIdr: null,
+      kmPerYear: null,
+    });
+  }
+  await insertChunked(unitRows, (c) => prisma.unit.createMany({ data: c as never }));
+
+  // — TireRecord (Modul A): ban yang sudah dilepas (registry lifecycle) —
+  const tireRows: Row[] = [];
+  for (const t of haulTrucks) {
+    const count = rng.int(8, 12);
+    for (let n = 0; n < count; n++) {
+      const pressureDev = clamp(rng.gaussian(t.pressureBase, 3), 0, 30);
+      const loadIdx = clamp(rng.gaussian(t.loadIndex, 0.05), 0.7, 1.3);
+      const roadBadness = clamp(ROUTE_BADNESS + rng.range(-0.05, 0.05), 0, 1);
+      const life = clamp(
+        trueLifeKm(t.model.brandBase, pressureDev, roadBadness, loadIdx, t.operatorFactor) +
+          rng.gaussian(0, 5_000),
+        58_000,
+        122_000,
+      );
+      const removalDate = daysBefore(SEED_TODAY, rng.int(20, 700));
+      const installDate = daysBefore(removalDate, rng.int(150, 420));
+      tireRows.push({
+        id: `TR-${t.id}-${String(n + 1).padStart(2, "0")}`,
+        unitId: t.id,
+        position: rng.pick(TIRE_POSITIONS),
+        installDate,
+        removalDate,
+        kmAtRemoval: Math.round(life),
+        avgPressureDeviationPct: Number(pressureDev.toFixed(1)),
+        loadIndex: Number(loadIdx.toFixed(3)),
+        removalReason: rng.pick(REMOVAL_REASONS),
+        costIdr: t.tirePriceIdr,
+      });
+    }
+  }
+  await insertChunked(tireRows, (c) => prisma.tireRecord.createMany({ data: c as never }));
+
+  // — TripLog + TripSegmentExposure (Modul A): eksposur fitur untuk §12.1 —
+  const tripRows: Row[] = [];
+  const exposureRows: Row[] = [];
+  for (const t of haulTrucks) {
+    const trips = rng.int(16, 24);
+    for (let n = 0; n < trips; n++) {
+      const tripId = `TL-${t.id}-${String(n + 1).padStart(2, "0")}`;
+      const roundTrips = rng.int(4, 8);
+      const km = roundTrips * ROUTE_KM * 2; // PP
+      const operator = rng.pick(operators);
+      tripRows.push({
+        id: tripId,
+        unitId: t.id,
+        operatorId: operator.id,
+        date: daysBefore(SEED_TODAY, rng.int(0, 120)),
+        km,
+        avgPressureDeviationPct: Number(clamp(rng.gaussian(t.pressureBase, 2.5), 0, 30).toFixed(1)),
+        payloadIdx: Number(clamp(rng.gaussian(t.loadIndex, 0.04), 0.7, 1.3).toFixed(3)),
+      });
+      for (const s of SEGMENTS) {
+        exposureRows.push({
+          id: `EX-${tripId}-${s.id}`,
+          tripLogId: tripId,
+          segmentId: s.id,
+          km: Number(((km * s.lengthKm) / ROUTE_KM).toFixed(1)),
+        });
+      }
+    }
+  }
+  await insertChunked(tripRows, (c) => prisma.tripLog.createMany({ data: c as never }));
+  await insertChunked(exposureRows, (c) => prisma.tripSegmentExposure.createMany({ data: c as never }));
+
+  // — PayloadEvent (Modul B): ~4.000 event vs target 91 t —
+  const payloadRows: Row[] = [];
+  const EVENTS_PER_UNIT = Math.round(4_000 / HD785_COUNT);
+  for (const d of dumpers) {
+    for (let n = 0; n < EVENTS_PER_UNIT; n++) {
+      const measured = clamp(
+        rng.gaussian(HD785_TARGET_KG * d.meanFactor, d.stdevKg),
+        55_000,
+        118_000,
+      );
+      const measuredKg = Math.round(measured);
+      payloadRows.push({
+        id: `PE-${d.id}-${String(n + 1).padStart(4, "0")}`,
+        unitId: d.id,
+        operatorId: rng.pick(operators).id,
+        timestamp: new Date(
+          daysBefore(SEED_TODAY, rng.int(0, 60)).getTime() + rng.int(0, 86_399) * 1_000,
+        ),
+        measuredPayloadKg: measuredKg,
+        targetPayloadKg: HD785_TARGET_KG,
+        status: classifyPayload(measuredKg, HD785_TARGET_KG),
+      });
+    }
+  }
+  await insertChunked(payloadRows, (c) => prisma.payloadEvent.createMany({ data: c as never }));
+
+  // — CalibrationRecord (Modul B): sebagian perlu kalibrasi (offset/usia) —
+  const calibrationRows: Row[] = dumpers.map((d) => ({
+    id: `CAL-${d.id}`,
+    unitId: d.id,
+    lastCalibrationDate: daysBefore(SEED_TODAY, rng.int(5, 170)),
+    scaleStudyOffsetPct: Number(clamp(rng.gaussian(0, 4), -9, 9).toFixed(1)),
+  }));
+  await prisma.calibrationRecord.createMany({ data: calibrationRows as never });
+
+  // — CostParams (settings id=1) dari ASUMSI default (§12) —
+  await prisma.costParams.create({ data: { id: 1, ...defaultCostParams } });
+
+  // — Ringkasan —
+  const [units, haul, dump, tires, trips, exposures, payloads, calibrations] = await Promise.all([
+    prisma.unit.count(),
+    prisma.unit.count({ where: { category: "haul_truck" } }),
+    prisma.unit.count({ where: { category: "pit_dumper" } }),
+    prisma.tireRecord.count(),
+    prisma.tripLog.count(),
+    prisma.tripSegmentExposure.count(),
+    prisma.payloadEvent.count(),
+    prisma.calibrationRecord.count(),
+  ]);
+  const [under, ok, over] = await Promise.all([
+    prisma.payloadEvent.count({ where: { status: "under" } }),
+    prisma.payloadEvent.count({ where: { status: "ok" } }),
+    prisma.payloadEvent.count({ where: { status: "over" } }),
+  ]);
+
+  console.log("✓ Seed selesai (deterministik).");
+  console.table({
+    "Unit (total)": units,
+    "  haul_truck (Scania/Volvo, ban)": haul,
+    "  pit_dumper (HD785, payload)": dump,
+    Operator: operators.length,
+    RoadSegment: SEGMENTS.length,
+    TireRecord: tires,
+    TripLog: trips,
+    TripSegmentExposure: exposures,
+    PayloadEvent: payloads,
+    CalibrationRecord: calibrations,
+  });
+  console.log(`Payload status — under: ${under} · ok: ${ok} · over: ${over}`);
+  if (haul !== 30 || dump !== 12) {
+    throw new Error(`Pemetaan unit salah! haul_truck=${haul} (≠30), pit_dumper=${dump} (≠12)`);
+  }
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error("✗ Seed gagal:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

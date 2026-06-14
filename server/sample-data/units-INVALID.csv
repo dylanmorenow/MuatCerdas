@@ -1,0 +1,5 @@
+id,category,model,tareKg,ratedPayloadKg,tiresCount,tireModel,tirePriceIdr,kmPerYear
+HT-IMP-10,haul_truck,Scania P410,9000,30000,10,Michelin X Works Z,20000000,100000
+HT-IMP-11,haul_truck,Scania R580,,34000,10,Bridgestone M840,20000000,100000
+HT-IMP-12,excavator,PC2000,30000,40000,4,,,
+HT-IMP-13,haul_truck,Volvo FH16 6x4T,9800,33000,abc,Michelin,20000000,100000

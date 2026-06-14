@@ -1,0 +1,4 @@
+id,unitId,position,installDate,removalDate,kmAtRemoval,avgPressureDeviationPct,loadIndex,removalReason,costIdr
+TR-IMP-01,HT-01,FL,2024-01-15,2024-09-20,82000,4.5,0.95,worn,20000000
+TR-IMP-02,HT-02,D1L-O,2024-02-01,2024-10-10,69000,9.2,1.05,worn,20000000
+TR-IMP-03,HT-03,D2R-I,2024-03-05,2024-08-18,58000,13.0,1.12,overload,20000000

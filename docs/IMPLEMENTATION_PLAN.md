@@ -20,9 +20,9 @@
 - [x] **Unit test** mengunci sanity PRD §8 (capturedPerUnit≈Rp53,8jt; fleet30≈Rp1,62M; payback≈3,7 bln; status under/ok/over SR-V1). `npm run test` hijau.
 
 ## M3 — Seed data realistis + ingest  ·  FR-0002-1/2, SR-1/2/V2/V3
-- [ ] `server/seed.ts`: dataset realistis — truk hauling (Scania/Volvo) utk Modul A; HD785 utk Modul B; operator & segmen laterit; deterministik. **Pemetaan unit benar.**
-- [ ] Endpoint `/import` CSV/XLSX (papaparse + SheetJS) dgn validasi Zod & error per-baris; tegakkan SR-V3 (tolak unit salah-modul).
-- [ ] Verifikasi AC FR-0002-1/2.
+- [x] `server/seed.ts`: dataset realistis — truk hauling (Scania/Volvo) utk Modul A; HD785 utk Modul B; operator & segmen laterit; deterministik. **Pemetaan unit benar.**
+- [x] Endpoint `/import` CSV/XLSX (papaparse + SheetJS) dgn validasi Zod & error per-baris; tegakkan SR-V3 (tolak unit salah-modul).
+- [x] Verifikasi AC FR-0002-1/2.
 
 ## M4 — Modul A (Tire) end-to-end  ·  FR-0002-3/4/5/6
 - [ ] Endpoint server: registry ban, prediksi, atribusi, rekomendasi (panggil `shared`).

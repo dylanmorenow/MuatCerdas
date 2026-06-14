@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import { healthRoutes } from "./routes/health";
+import { importRoutes } from "./routes/import";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -8,7 +10,9 @@ async function main(): Promise<void> {
   const app = Fastify({ logger: true });
 
   await app.register(cors, { origin: true });
+  await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } }); // 25 MB
   await app.register(healthRoutes);
+  await app.register(importRoutes);
 
   try {
     await app.listen({ port: PORT, host: "0.0.0.0" });
