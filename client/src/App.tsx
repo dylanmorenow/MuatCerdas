@@ -4,6 +4,9 @@ import { ComingSoon } from "./components/ui";
 import { TireList } from "./pages/TireList";
 import { TireUnitDetail } from "./pages/TireUnitDetail";
 import { TireRecommendations } from "./pages/TireRecommendations";
+import { PayloadAnalytics } from "./pages/PayloadAnalytics";
+import { LoadingGuidance } from "./pages/LoadingGuidance";
+import { CalibrationHealth } from "./pages/CalibrationHealth";
 
 export default function App() {
   return (
@@ -16,10 +19,12 @@ export default function App() {
         <Route path="tire/recommendations" element={<TireRecommendations />} />
         <Route path="tire/:id" element={<TireUnitDetail />} />
 
+        {/* Modul B — Payload (M5) */}
+        <Route path="payload" element={<PayloadAnalytics />} />
+        <Route path="payload/guidance" element={<LoadingGuidance />} />
+        <Route path="calibration" element={<CalibrationHealth />} />
+
         {/* Layar milestone berikutnya */}
-        <Route path="payload" element={<ComingSoon title="Payload — Analitik" note="Modul B (HD785) hadir di M5." />} />
-        <Route path="payload/guidance" element={<ComingSoon title="Loading Guidance" note="Indikator pemuatan hijau/kuning/merah hadir di M5." />} />
-        <Route path="calibration" element={<ComingSoon title="Calibration Health" note="Hadir di M5." />} />
         <Route path="finance" element={<ComingSoon title="Finansial & ROI" note="Hadir di M6." />} />
         <Route path="data" element={<ComingSoon title="Data / Import" note="Hadir di M7. Endpoint /api/import sudah aktif." />} />
 

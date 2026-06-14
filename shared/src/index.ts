@@ -12,4 +12,5 @@ export * from "./payload/analytics"; // §12.3
 export * from "./payload/wear"; // §12.4
 export * from "./payload/guidance"; // §12.5
 export * from "./payload/calibration"; // §12.6
+export * from "./payload/policy"; // FR-0002-11
 export * from "./finance/roi"; // §12.8–§12.9

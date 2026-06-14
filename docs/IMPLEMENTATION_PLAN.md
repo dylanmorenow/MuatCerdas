@@ -30,9 +30,9 @@
 - [x] Verifikasi AC FR-0002-4/5.
 
 ## M5 — Modul B (Payload) end-to-end  ·  FR-0002-7/8/9/10/11
-- [ ] Endpoint: analitik payload, kaitan overload→keausan, kalibrasi, loading policy.
-- [ ] Client: **Payload — Analitik** (distribusi vs 91 t, %under/ok/over, statistik, filter, tren, panel kaitan keausan), **Loading Guidance** (ambang + indikator hijau/kuning/merah + policy), **Calibration Health**.
-- [ ] Verifikasi AC FR-0002-7/10.
+- [x] Endpoint: analitik payload, kaitan overload→keausan, kalibrasi, loading policy.
+- [x] Client: **Payload — Analitik** (distribusi vs 91 t, %under/ok/over, statistik, filter, tren, panel kaitan keausan), **Loading Guidance** (ambang + indikator hijau/kuning/merah + policy), **Calibration Health**.
+- [x] Verifikasi AC FR-0002-7/10.
 
 ## M6 — Finansial, ROI & Dashboard  ·  FR-0002-12/13/14
 - [ ] Client **Finansial & ROI**: asumsi editable (disimpan DB), hasil live, skenario armada.

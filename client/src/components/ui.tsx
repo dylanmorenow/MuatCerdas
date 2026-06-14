@@ -53,6 +53,25 @@ export function StatusBadge({ status }: { status: TireStatus }) {
   );
 }
 
+export type Tone = "green" | "amber" | "red" | "slate" | "blue";
+
+const TONE_CLS: Record<Tone, string> = {
+  green: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  red: "bg-red-50 text-red-700 ring-red-600/20",
+  slate: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  blue: "bg-blue-50 text-kpp-blue ring-blue-600/20",
+};
+
+/** Badge generik berbasis tone (dipakai status payload under/ok/over & kalibrasi). */
+export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return (
+    <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", TONE_CLS[tone])}>
+      {children}
+    </span>
+  );
+}
+
 /** Sisa umur km: nilai negatif = ban sudah terlewati jatuh tempo. */
 export function formatRemainingKm(km: number): string {
   if (km < 0) return `Terlewati ${formatNumber(Math.abs(km))} km`;
