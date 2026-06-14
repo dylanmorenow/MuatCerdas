@@ -35,9 +35,9 @@
 - [x] Verifikasi AC FR-0002-7/10.
 
 ## M6 — Finansial, ROI & Dashboard  ·  FR-0002-12/13/14
-- [ ] Client **Finansial & ROI**: asumsi editable (disimpan DB), hasil live, skenario armada.
-- [ ] **Dashboard** KPI gabungan (biaya terhindarkan, penghematan, payback, ROI) + ringkasan tiap modul.
-- [ ] Verifikasi AC FR-0002-12/13.
+- [x] Client **Finansial & ROI**: asumsi editable (disimpan DB), hasil live, skenario armada.
+- [x] **Dashboard** KPI gabungan (biaya terhindarkan, penghematan, payback, ROI) + ringkasan tiap modul.
+- [x] Verifikasi AC FR-0002-12/13.
 
 ## M7 — Laporan, Data/Import UI, polish  ·  FR-0002-15, NFR
 - [ ] Layar **Data/Import** (unggah, validasi, kelola unit/operator/rute).
