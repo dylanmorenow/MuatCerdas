@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+client/dist/
+
+# env (keep examples)
+.env
+.env.*
+!.env.example
+
+# database (SQLite dev)
+*.db
+*.db-journal
+*.sqlite
+
+# logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,147 @@
+// Skema Prisma — mirror entitas PRD §11 (storage layer).
+// Enum direpresentasikan sebagai String (SQLite tak punya enum native); nilai ditegakkan
+// oleh Zod di @muatcerdas/shared (schemas.ts). Pemetaan unit (SR-V3) ditegakkan di service/Zod,
+// bukan di DB: Unit.category "haul_truck" (ban/Modul A) vs "pit_dumper" (HD785/Modul B).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id             String  @id
+  category       String // "haul_truck" | "pit_dumper"
+  model          String
+  tareKg         Float
+  ratedPayloadKg Float
+  tiresCount     Int
+  tireModel      String?
+  tirePriceIdr   Float?
+  kmPerYear      Float?
+
+  tireRecords   TireRecord[]
+  tripLogs      TripLog[]
+  payloadEvents PayloadEvent[]
+  calibrations  CalibrationRecord[]
+}
+
+model Operator {
+  id    String @id
+  name  String
+  shift String // "day" | "night"
+
+  tripLogs      TripLog[]
+  payloadEvents PayloadEvent[]
+}
+
+model RoadSegment {
+  id                String @id
+  name              String
+  surface           String // "laterite" | "rock" | "sealed"
+  lengthKm          Float
+  conditionScore    Float // 0..1
+  avgSpeedLoadedKmh Float
+  avgSpeedEmptyKmh  Float
+
+  exposures TripSegmentExposure[]
+}
+
+// Registry ban truk hauling (Modul A).
+model TireRecord {
+  id                      String    @id
+  unitId                  String
+  position                String
+  installDate             DateTime
+  removalDate             DateTime?
+  kmAtRemoval             Float?
+  avgPressureDeviationPct Float?
+  loadIndex               Float?
+  removalReason           String // "worn" | "cut" | "overload" | "scheduled"
+  costIdr                 Float
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+}
+
+// Log perjalanan truk hauling (Modul A).
+model TripLog {
+  id                      String   @id
+  unitId                  String
+  operatorId              String
+  date                    DateTime
+  km                      Float
+  avgPressureDeviationPct Float?
+  payloadIdx              Float?
+
+  unit            Unit                  @relation(fields: [unitId], references: [id])
+  operator        Operator              @relation(fields: [operatorId], references: [id])
+  segmentExposure TripSegmentExposure[]
+
+  @@index([unitId])
+  @@index([operatorId])
+}
+
+// Anak relasional dari TripLog.segmentExposure (PRD §11) — queryable untuk §12.1.
+model TripSegmentExposure {
+  id        String @id @default(cuid())
+  tripLogId String
+  segmentId String
+  km        Float
+
+  tripLog TripLog     @relation(fields: [tripLogId], references: [id], onDelete: Cascade)
+  segment RoadSegment @relation(fields: [segmentId], references: [id])
+
+  @@index([tripLogId])
+  @@index([segmentId])
+}
+
+// Event payload HD785 (Modul B).
+model PayloadEvent {
+  id                String   @id
+  unitId            String
+  operatorId        String
+  timestamp         DateTime
+  measuredPayloadKg Float
+  targetPayloadKg   Float
+  status            String // "under" | "ok" | "over"
+
+  unit     Unit     @relation(fields: [unitId], references: [id])
+  operator Operator @relation(fields: [operatorId], references: [id])
+
+  @@index([unitId])
+  @@index([operatorId])
+}
+
+model CalibrationRecord {
+  id                  String   @id @default(cuid())
+  unitId              String
+  lastCalibrationDate DateTime
+  scaleStudyOffsetPct Float
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+}
+
+// Settings baris-tunggal — CostParams (PRD §12). Editable di UI (M6); selalu id = 1.
+model CostParams {
+  id                        Int   @id @default(1)
+  tirePriceIdr              Float
+  tiresPerUnit              Float
+  kmPerYear                 Float
+  tireLifeActualKm          Float
+  tireLifeBestKm            Float
+  captureRate               Float
+  fleetSize                 Int
+  capexIdr                  Float
+  opexAnnualIdr             Float
+  fuelCostPerTripIdr        Float
+  tripsPerYear              Float
+  underloadPct              Float
+  overloadWearCostFactorIdr Float
+}
