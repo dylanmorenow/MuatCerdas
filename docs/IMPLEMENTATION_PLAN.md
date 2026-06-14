@@ -25,9 +25,9 @@
 - [x] Verifikasi AC FR-0002-1/2.
 
 ## M4 — Modul A (Tire) end-to-end  ·  FR-0002-3/4/5/6
-- [ ] Endpoint server: registry ban, prediksi, atribusi, rekomendasi (panggil `shared`).
-- [ ] Client: **Tire — Daftar & Prediksi** (tabel + detail per unit: riwayat, sisa umur+keyakinan, atribusi penyebab) & **Tire — Rekomendasi** (+ estimasi penghematan).
-- [ ] Verifikasi AC FR-0002-4/5.
+- [x] Endpoint server: registry ban, prediksi, atribusi, rekomendasi (panggil `shared`).
+- [x] Client: **Tire — Daftar & Prediksi** (tabel + detail per unit: riwayat, sisa umur+keyakinan, atribusi penyebab) & **Tire — Rekomendasi** (+ estimasi penghematan).
+- [x] Verifikasi AC FR-0002-4/5.
 
 ## M5 — Modul B (Payload) end-to-end  ·  FR-0002-7/8/9/10/11
 - [ ] Endpoint: analitik payload, kaitan overload→keausan, kalibrasi, loading policy.

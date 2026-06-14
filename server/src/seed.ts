@@ -47,6 +47,30 @@ const ROUTE_KM = SEGMENTS.reduce((s, x) => s + x.lengthKm, 0);
 const ROUTE_BADNESS =
   SEGMENTS.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / ROUTE_KM;
 
+/**
+ * Bagi-km per segmen untuk satu unit menurut kekasaran rute (M4): unit "kasar"
+ * menaruh lebih banyak km di segmen laterit (badness tinggi), lebih sedikit di aspal.
+ * Hasil bervariasi antar unit → fitur kondisi jalan §12.1 jadi terderivasi dari DB.
+ */
+function segmentSharesFor(roughness: number): number[] {
+  const k = 12;
+  const raw = SEGMENTS.map((s) => {
+    const badness = 1 - s.conditionScore;
+    const emphasis = Math.max(
+      0.05,
+      1 + (roughness - ROUTE_BADNESS) * k * (badness - ROUTE_BADNESS),
+    );
+    return s.lengthKm * emphasis;
+  });
+  const sum = raw.reduce((a, b) => a + b, 0);
+  return raw.map((w) => w / sum);
+}
+
+/** Keburukan jalan terbobot per-km dari share segmen (== nilai yang nanti diturunkan service). */
+function weightedBadness(shares: number[]): number {
+  return SEGMENTS.reduce((acc, s, i) => acc + (shares[i] ?? 0) * (1 - s.conditionScore), 0);
+}
+
 /** "Umur sebenarnya" ban (km) sebagai fungsi kondisi — generator data latih §12.1. */
 function trueLifeKm(
   brandBase: number,
@@ -93,12 +117,14 @@ async function resetTables(): Promise<void> {
 async function main(): Promise<void> {
   await resetTables();
 
-  // — Operator (latent aggressiveness untuk variasi keausan/overload) —
+  // — Operator — aggressiveness tersebar DETERMINISTIK 0,12..0,85. Latent (tak disimpan),
+  //   tapi terderivasi lewat kecenderungan overload HD785 (bias payload di bawah) →
+  //   jadi sumber faktor operator §12.1 yang independen dari tekanan/muatan.
   const operators = OPERATOR_NAMES.map((name, i) => ({
     id: `OP-${String(i + 1).padStart(2, "0")}`,
     name,
     shift: i % 2 === 0 ? "day" : "night",
-    aggr: clamp(rng.range(0.1, 0.9), 0, 1), // latent, tak disimpan
+    aggr: Number((0.12 + 0.73 * (i / (OPERATOR_NAMES.length - 1))).toFixed(3)),
   }));
   await prisma.operator.createMany({
     data: operators.map((o) => ({ id: o.id, name: o.name, shift: o.shift })),
@@ -126,7 +152,11 @@ async function main(): Promise<void> {
     model: (typeof HAUL_MODELS)[number];
     pressureBase: number;
     loadIndex: number;
-    operatorFactor: number;
+    primaryOperatorId: string;
+    operatorFactor: number; // = aggr operator utama (penggerak "benar" keausan)
+    roadBadness: number; // keburukan jalan terbobot unit (== terderivasi dari exposure)
+    segShares: number[]; // share km per indeks SEGMENTS
+    currentSetAgeDays: number; // usia set ban terpasang → currentKm bervariasi (sebagian dekat habis)
     tirePriceIdr: number;
   }
 
@@ -138,9 +168,25 @@ async function main(): Promise<void> {
     const id = `HT-${String(i + 1).padStart(2, "0")}`;
     const pressureBase = clamp(rng.range(1, 16), 0, 30); // truk terawat vs buruk
     const loadIndex = clamp(rng.gaussian(0.95, 0.08), 0.78, 1.18);
-    const operatorFactor = rng.pick(operators).aggr;
+    const primaryOp = operators[i % operators.length]!; // sebar operator utama ke armada
+    const segShares = segmentSharesFor(rng.range(0.3, 0.7)); // profil rute per unit
+    const roadBadness = weightedBadness(segShares);
+    // Usia set ban terpasang (hari) — sebar merata dalam jendela clamp currentTireKm
+    // agar sisa umur tersebar mulus (sebagian unit due/critical, sebagian masih ok).
+    const currentSetAgeDays = rng.int(40, 310);
     const tirePriceIdr = 20_000_000;
-    haulTrucks.push({ id, model, pressureBase, loadIndex, operatorFactor, tirePriceIdr });
+    haulTrucks.push({
+      id,
+      model,
+      pressureBase,
+      loadIndex,
+      primaryOperatorId: primaryOp.id,
+      operatorFactor: primaryOp.aggr,
+      roadBadness,
+      segShares,
+      currentSetAgeDays,
+      tirePriceIdr,
+    });
     unitRows.push({
       id,
       category: "haul_truck",
@@ -188,14 +234,16 @@ async function main(): Promise<void> {
     for (let n = 0; n < count; n++) {
       const pressureDev = clamp(rng.gaussian(t.pressureBase, 3), 0, 30);
       const loadIdx = clamp(rng.gaussian(t.loadIndex, 0.05), 0.7, 1.3);
-      const roadBadness = clamp(ROUTE_BADNESS + rng.range(-0.05, 0.05), 0, 1);
+      // Suku jalan & operator memakai nilai unit yang DB-derivable → regresi §12.1 bisa
+      // memulihkan koefisien keempat faktor.
       const life = clamp(
-        trueLifeKm(t.model.brandBase, pressureDev, roadBadness, loadIdx, t.operatorFactor) +
+        trueLifeKm(t.model.brandBase, pressureDev, t.roadBadness, loadIdx, t.operatorFactor) +
           rng.gaussian(0, 5_000),
         58_000,
         122_000,
       );
-      const removalDate = daysBefore(SEED_TODAY, rng.int(20, 700));
+      // Pelepasan TERBARU per unit ≈ usia set sekarang (currentSetAgeDays); sisanya lebih lama.
+      const removalDate = daysBefore(SEED_TODAY, t.currentSetAgeDays + rng.int(0, 480));
       const installDate = daysBefore(removalDate, rng.int(150, 420));
       tireRows.push({
         id: `TR-${t.id}-${String(n + 1).padStart(2, "0")}`,
@@ -222,24 +270,26 @@ async function main(): Promise<void> {
       const tripId = `TL-${t.id}-${String(n + 1).padStart(2, "0")}`;
       const roundTrips = rng.int(4, 8);
       const km = roundTrips * ROUTE_KM * 2; // PP
-      const operator = rng.pick(operators);
+      // ~70% trip oleh operator utama → faktor operator unit terderivasi dari mix operator.
+      const operatorId = rng.bool(0.7) ? t.primaryOperatorId : rng.pick(operators).id;
       tripRows.push({
         id: tripId,
         unitId: t.id,
-        operatorId: operator.id,
+        operatorId,
         date: daysBefore(SEED_TODAY, rng.int(0, 120)),
         km,
         avgPressureDeviationPct: Number(clamp(rng.gaussian(t.pressureBase, 2.5), 0, 30).toFixed(1)),
         payloadIdx: Number(clamp(rng.gaussian(t.loadIndex, 0.04), 0.7, 1.3).toFixed(3)),
       });
-      for (const s of SEGMENTS) {
+      // Eksposur km mengikuti profil rute unit (bukan proporsi panjang seragam).
+      SEGMENTS.forEach((s, si) => {
         exposureRows.push({
           id: `EX-${tripId}-${s.id}`,
           tripLogId: tripId,
           segmentId: s.id,
-          km: Number(((km * s.lengthKm) / ROUTE_KM).toFixed(1)),
+          km: Number((km * (t.segShares[si] ?? 0)).toFixed(1)),
         });
-      }
+      });
     }
   }
   await insertChunked(tripRows, (c) => prisma.tripLog.createMany({ data: c as never }));
@@ -250,8 +300,12 @@ async function main(): Promise<void> {
   const EVENTS_PER_UNIT = Math.round(4_000 / HD785_COUNT);
   for (const d of dumpers) {
     for (let n = 0; n < EVENTS_PER_UNIT; n++) {
+      const op = rng.pick(operators);
+      // Operator agresif memuat lebih berat → overload-rate per operator bervariasi
+      // (sumber faktor operator §12.1 yang independen dari fitur ban).
+      const opBias = (op.aggr - 0.5) * 0.06;
       const measured = clamp(
-        rng.gaussian(HD785_TARGET_KG * d.meanFactor, d.stdevKg),
+        rng.gaussian(HD785_TARGET_KG * (d.meanFactor + opBias), d.stdevKg),
         55_000,
         118_000,
       );
@@ -259,7 +313,7 @@ async function main(): Promise<void> {
       payloadRows.push({
         id: `PE-${d.id}-${String(n + 1).padStart(4, "0")}`,
         unitId: d.id,
-        operatorId: rng.pick(operators).id,
+        operatorId: op.id,
         timestamp: new Date(
           daysBefore(SEED_TODAY, rng.int(0, 60)).getTime() + rng.int(0, 86_399) * 1_000,
         ),
