@@ -14,10 +14,10 @@
 - [x] Verifikasi server hidup & client kosong tampil.
 
 ## M2 — Domain/model + test (INTI)  ·  PRD §12, SR-4/5/7/8/12/13
-- [ ] `tire/predict.ts` (§12.1 regresi + fallback), `tire/attribution.ts` (§12.2), `tire/finance.ts` (§12.7).
-- [ ] `payload/analytics.ts` (§12.3), `payload/wear.ts` (§12.4), `payload/guidance.ts` (§12.5), `payload/calibration.ts` (§12.6).
-- [ ] `finance/roi.ts` (§12.8–§12.9).
-- [ ] **Unit test** mengunci sanity PRD §8 (capturedPerUnit≈Rp53,8jt; fleet30≈Rp1,62M; payback≈3,7 bln; status under/ok/over SR-V1). `npm run test` hijau.
+- [x] `tire/predict.ts` (§12.1 regresi + fallback), `tire/attribution.ts` (§12.2), `tire/finance.ts` (§12.7).
+- [x] `payload/analytics.ts` (§12.3), `payload/wear.ts` (§12.4), `payload/guidance.ts` (§12.5), `payload/calibration.ts` (§12.6).
+- [x] `finance/roi.ts` (§12.8–§12.9).
+- [x] **Unit test** mengunci sanity PRD §8 (capturedPerUnit≈Rp53,8jt; fleet30≈Rp1,62M; payback≈3,7 bln; status under/ok/over SR-V1). `npm run test` hijau.
 
 ## M3 — Seed data realistis + ingest  ·  FR-0002-1/2, SR-1/2/V2/V3
 - [ ] `server/seed.ts`: dataset realistis — truk hauling (Scania/Volvo) utk Modul A; HD785 utk Modul B; operator & segmen laterit; deterministik. **Pemetaan unit benar.**
