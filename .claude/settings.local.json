@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(npm run db:setup)"
+      "PowerShell(npm run db:setup)",
+      "Bash(npm install *)",
+      "Bash(git -C C:\\\\Users\\\\Morenoz\\\\Documents\\\\muatcerdas status --short)",
+      "Bash(git -C C:\\\\Users\\\\Morenoz\\\\Documents\\\\muatcerdas branch --show-current)",
+      "Bash(git -C C:\\\\Users\\\\Morenoz\\\\Documents\\\\muatcerdas check-ignore shared/dist/index.js)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat\\(m2\\): engine domain PRD §12 \\(tire/payload/finansial\\) + unit test sanity' -m 'Modul murni di shared/ \\(dipakai server M4+\\): *)",
+      "Bash(curl --retry 40 --retry-delay 1 --retry-connrefused -sf http://localhost:3001/api/health)",
+      "Bash(curl -s -F \"file=@server/sample-data/units.csv\" http://localhost:3001/api/import/units)",
+      "Bash(curl -s -F \"file=@server/sample-data/units-INVALID.csv\" http://localhost:3001/api/import/units)",
+      "Bash(curl -s -F \"file=@server/sample-data/tires.csv\" http://localhost:3001/api/import/tires)",
+      "Bash(printf 'id,unitId,position,installDate,removalDate,kmAtRemoval,avgPressureDeviationPct,loadIndex,removalReason,costIdr\\\\nTR-BAD,HD-01,FL,2024-01-01,2024-09-01,80000,4,0.95,worn,20000000\\\\n')",
+      "Bash(npm run *)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"stopped PID $_\" } catch {} })",
+      "Bash(npm test *)"
     ]
   }
 }
