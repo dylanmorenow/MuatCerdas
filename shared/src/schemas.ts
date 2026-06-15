@@ -100,3 +100,21 @@ export const costParamsSchema = z.object({
   underloadPct: z.number().min(0).max(1),
   overloadWearCostFactorIdr: z.number().nonnegative(),
 });
+
+// — Modul C (Speed/TKPH) — docs/MODULE_C_SPEED.md §C.1–§C.6 —
+export const speedParamsSchema = z.object({
+  tempCorrectionFactor: z.number().positive(),
+  siteCorrectionFactor: z.number().positive(),
+  loadShareHeaviestPosition: z.number().min(0).max(1),
+  distancePerShiftKm: z.number().positive(),
+  workHoursPerShift: z.number().positive(),
+  effectiveWorkHoursPerDay: z.number().positive(),
+  fixedTimeHours: z.number().nonnegative(),
+  oneWayKm: z.number().positive(),
+  dailyTargetTon: z.number().positive(),
+});
+
+export const tkphCatalogEntrySchema = z.object({
+  tireModel: z.string().min(1),
+  catalogTkph: z.number().positive(),
+});

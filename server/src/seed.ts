@@ -4,13 +4,15 @@
 //
 // Jalankan: npm run db:seed -w @muatcerdas/server  (atau via db:setup).
 
-import { defaultCostParams, classifyPayload } from "@muatcerdas/shared";
+import { defaultCostParams, defaultSpeedParams, defaultTkphCatalog, classifyPayload } from "@muatcerdas/shared";
 import { prisma } from "./db";
 import { Rng, daysBefore, clamp } from "./lib/random";
 
 const SEED = 20_260_614;
 const SEED_TODAY = new Date("2026-06-14T00:00:00.000Z");
 const HD785_TARGET_KG = 91_000;
+// Ban off-highway HD785 (Modul C panel ringkas) — harus cocok dgn kunci defaultTkphCatalog.
+const HD785_TIRE_MODEL = "Bridgestone VRPS 27.00R49";
 
 const rng = new Rng(SEED);
 
@@ -112,6 +114,8 @@ async function resetTables(): Promise<void> {
   await prisma.operator.deleteMany();
   await prisma.roadSegment.deleteMany();
   await prisma.costParams.deleteMany();
+  await prisma.speedParams.deleteMany();
+  await prisma.tkphCatalog.deleteMany();
 }
 
 async function main(): Promise<void> {
@@ -220,7 +224,7 @@ async function main(): Promise<void> {
       tareKg: 75_000,
       ratedPayloadKg: HD785_TARGET_KG,
       tiresCount: 6,
-      tireModel: null,
+      tireModel: HD785_TIRE_MODEL,
       tirePriceIdr: null,
       kmPerYear: null,
     });
@@ -336,6 +340,12 @@ async function main(): Promise<void> {
 
   // — CostParams (settings id=1) dari ASUMSI default (§12) —
   await prisma.costParams.create({ data: { id: 1, ...defaultCostParams } });
+
+  // — Modul C (M9): SpeedParams (id=1) + katalog TKPH per model ban (WAJIB DICARI) —
+  await prisma.speedParams.create({ data: { id: 1, ...defaultSpeedParams } });
+  await prisma.tkphCatalog.createMany({
+    data: Object.entries(defaultTkphCatalog).map(([tireModel, catalogTkph]) => ({ tireModel, catalogTkph })),
+  });
 
   // — Ringkasan —
   const [units, haul, dump, tires, trips, exposures, payloads, calibrations] = await Promise.all([

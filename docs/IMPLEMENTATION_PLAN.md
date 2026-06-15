@@ -48,6 +48,13 @@
 ## M8 — (Opsional) Auth tipis  ·  FR-0002-16
 - [x] Login satu organisasi (session/JWT), dapat dinonaktifkan via env untuk demo.
 
+## M9 — Modul C: Speed Optimization (TKPH)  ·  docs/MODULE_C_SPEED.md, FR-0003-1..7
+- [x] `shared/speed/tkph.ts` (§C.1–§C.3), `productionSpeed.ts` (§C.4–§C.5), `decision.ts` (§C.6) + unit test AC#1–#5 (rekonsiliasi §C.5 terkunci). 16 test baru hijau; 107 test lama tetap hijau (A/B tak tersentuh).
+- [x] Param baru TERPISAH dari CostParams: `SpeedParams` + katalog TKPH (tabel `SpeedParams`/`TkphCatalog`, migrasi `add_speed_params`, seed default; WAJIB DICARI ditandai).
+- [x] Endpoint server `services/speed.ts` + `routes/speed.ts` (GET /api/speed, GET/PUT/POST params) — rantai penuh haul_truck + panel HD785 (SR-V3). + `speed-service.test.ts`.
+- [x] Layar **Speed Optimization** (client): banner AMAN/KONFLIK + opsi terukur, panel target & TKPH editable (recompute live), panduan driver (basis travel), tabel per-unit + HD785. Nav + route.
+- [x] Verifikasi: keputusan kanonik basis kerja-rata-rata; driver basis travel; SAFE→KONFLIK live; semua angka ASUMSI; tanpa feed live. JANGAN sentuh logika A/B — terpenuhi.
+
 ---
 
 ### Catatan jujur (untuk presentasi)

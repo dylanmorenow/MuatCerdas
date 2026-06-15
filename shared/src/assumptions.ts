@@ -1,4 +1,4 @@
-import type { CostParams } from "./types";
+import type { CostParams, SpeedParams } from "./types";
 
 /**
  * Default CostParams = ASUMSI (bukan data terverifikasi), editable di UI (M6).
@@ -33,3 +33,42 @@ export const defaultCostParams: CostParams = {
   underloadPct: 0.03, // ASUMSI (3%)
   overloadWearCostFactorIdr: 0, // PLACEHOLDER (belum ada data)
 };
+
+/**
+ * Default SpeedParams Modul C (§C.1–§C.6) = ASUMSI, editable di UI.
+ * TERPISAH dari CostParams → tidak menyentuh sanity Modul A/B yang terkunci.
+ * Semua nilai placeholder bertanda ASUMSI; ganti dgn data riil (lihat docs/ASSUMPTIONS.md §E/§F).
+ */
+export const defaultSpeedParams: SpeedParams = {
+  // — Koreksi TKPH ban (§C.2) —
+  tempCorrectionFactor: 0.85, // ASUMSI: situs tropis Kalimantan (panas) menurunkan kapasitas
+  siteCorrectionFactor: 1.0, // ASUMSI: netral sampai panduan pabrik tersedia
+  // — Beban ban kritis Qa (§C.1) —
+  loadShareHeaviestPosition: 0.1, // ASUMSI: fraksi GVW pada satu ban terberat
+  // — Vm / TKPH site (§C.1) —
+  distancePerShiftKm: 280, // ASUMSI
+  workHoursPerShift: 12, // ASUMSI (1 shift)
+  // — Rantai target produksi (§C.4) —
+  effectiveWorkHoursPerDay: 20, // ASUMSI (2 shift efektif)
+  fixedTimeHours: 0.5, // ASUMSI: loading+dumping+manuver+antri per siklus
+  oneWayKm: 35, // rute CPP KM33 → Jetty (verifikasi, docs/ASSUMPTIONS.md §D)
+  dailyTargetTon: 6_000, // ASUMSI sementara (rantai RKAB belum dikunci, §E)
+};
+
+/**
+ * Katalog TKPH per model ban (§C.2). **WAJIB DICARI** dari brosur TKPH/TMPH pabrik
+ * (Bridgestone/Michelin) sesuai ukuran — semua nilai di sini PLACEHOLDER (docs/ASSUMPTIONS.md §F).
+ * Kunci = `tireModel` pada Unit. Ban truk hauling (Modul A) + 1 ban HD785 (panel Modul C ringkas).
+ */
+export const defaultTkphCatalog: Record<string, number> = {
+  // — ban truk hauling (haul_truck) — WAJIB DICARI —
+  "Michelin X Works Z": 120,
+  "Bridgestone M840": 115,
+  "Michelin X Multi D": 110,
+  "Bridgestone L355": 118,
+  // — ban HD785 (pit_dumper) off-highway — WAJIB DICARI —
+  "Bridgestone VRPS 27.00R49": 700,
+};
+
+/** Fallback TKPH katalog bila model ban tak ada di katalog (ASUMSI konservatif). */
+export const DEFAULT_TKPH_FALLBACK = 110;

@@ -33,6 +33,10 @@ const NAV: NavGroup[] = [
     ],
   },
   {
+    heading: "Modul C — Kecepatan (TKPH)",
+    items: [{ to: "/speed", label: "Speed Optimization" }],
+  },
+  {
     heading: "Inti",
     items: [
       { to: "/finance", label: "Finansial & ROI" },

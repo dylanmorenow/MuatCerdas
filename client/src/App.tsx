@@ -12,6 +12,7 @@ import { LoadingGuidance } from "./pages/LoadingGuidance";
 import { CalibrationHealth } from "./pages/CalibrationHealth";
 import { Dashboard } from "./pages/Dashboard";
 import { Finance } from "./pages/Finance";
+import { SpeedOptimization } from "./pages/SpeedOptimization";
 import { DataImport } from "./pages/DataImport";
 
 export default function App() {
@@ -35,6 +36,9 @@ export default function App() {
         <Route path="payload" element={<PayloadAnalytics />} />
         <Route path="payload/guidance" element={<LoadingGuidance />} />
         <Route path="calibration" element={<CalibrationHealth />} />
+
+        {/* Modul C — Kecepatan/TKPH (M9) */}
+        <Route path="speed" element={<SpeedOptimization />} />
 
         {/* Inti — Finansial & ROI (M6) */}
         <Route path="finance" element={<Finance />} />

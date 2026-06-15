@@ -8,6 +8,7 @@ import { importRoutes } from "./routes/import";
 import { tiresRoutes } from "./routes/tires";
 import { payloadRoutes } from "./routes/payload";
 import { financeRoutes } from "./routes/finance";
+import { speedRoutes } from "./routes/speed";
 import { dataRoutes } from "./routes/data";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -27,6 +28,7 @@ async function main(): Promise<void> {
   await app.register(tiresRoutes);
   await app.register(payloadRoutes);
   await app.register(financeRoutes);
+  await app.register(speedRoutes);
   await app.register(dataRoutes);
 
   try {

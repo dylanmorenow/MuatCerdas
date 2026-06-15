@@ -40,5 +40,7 @@ Pareto · fitur tak perlu · over-engineering (microservice, RBAC kompleks, mult
 @docs/SRS.md
 @docs/TECH_DESIGN.md
 @docs/IMPLEMENTATION_PLAN.md
+@docs/MODULE_C_SPEED.md
+@docs/MODULE_D_DRIVER_AND_MAPPING.md
 
 Pendukung (baca saat relevan): `docs/BRD.md`, `docs/VIBECODING_GUIDE.md`, `README.md`.

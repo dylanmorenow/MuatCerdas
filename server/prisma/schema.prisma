@@ -145,3 +145,24 @@ model CostParams {
   underloadPct              Float
   overloadWearCostFactorIdr Float
 }
+
+// Settings baris-tunggal — SpeedParams Modul C (docs/MODULE_C_SPEED.md §C). Editable di UI (M9);
+// selalu id = 1. TERPISAH dari CostParams agar sanity Modul A/B tak tersentuh.
+model SpeedParams {
+  id                       Int   @id @default(1)
+  tempCorrectionFactor     Float
+  siteCorrectionFactor     Float
+  loadShareHeaviestPosition Float
+  distancePerShiftKm       Float
+  workHoursPerShift        Float
+  effectiveWorkHoursPerDay Float
+  fixedTimeHours           Float
+  oneWayKm                 Float
+  dailyTargetTon           Float
+}
+
+// Katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. Editable (FR-0003-1).
+model TkphCatalog {
+  tireModel   String @id
+  catalogTkph Float
+}

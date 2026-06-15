@@ -118,3 +118,30 @@ export interface CostParams {
   underloadPct: number;
   overloadWearCostFactorIdr: number;
 }
+
+/**
+ * Parameter Modul C — Speed/TKPH (ASUMSI, editable di UI). Sumber kebenaran rumus:
+ * docs/MODULE_C_SPEED.md §C.1–§C.6. Disimpan terpisah dari CostParams (tak menyentuh
+ * sanity Modul A/B). Default di assumptions.ts (defaultSpeedParams).
+ */
+export interface SpeedParams {
+  // — Koreksi TKPH ban (§C.2) —
+  tempCorrectionFactor: number;
+  siteCorrectionFactor: number;
+  // — Beban ban kritis Qa (§C.1) —
+  loadShareHeaviestPosition: number;
+  // — Vm / TKPH site (§C.1) —
+  distancePerShiftKm: number;
+  workHoursPerShift: number;
+  // — Rantai target produksi (§C.4) —
+  effectiveWorkHoursPerDay: number;
+  fixedTimeHours: number;
+  oneWayKm: number;
+  dailyTargetTon: number;
+}
+
+/** Entri katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. */
+export interface TkphCatalogEntry {
+  tireModel: string;
+  catalogTkph: number;
+}
