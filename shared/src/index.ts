@@ -3,6 +3,7 @@ export * from "./types";
 export * from "./schemas";
 export * from "./assumptions";
 export * from "./format";
+export * from "./csv";
 
 // Engine domain (PRD §12) — dibangun di M2.
 export * from "./tire/predict"; // §12.1

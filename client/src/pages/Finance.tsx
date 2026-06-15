@@ -221,7 +221,10 @@ function NumberField({
         value={value}
         step={step}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(Number.isFinite(n) ? n : 0);
+        }}
         className={cx(
           "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm",
           disabled && "bg-slate-100 text-slate-400",

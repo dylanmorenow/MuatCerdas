@@ -9,6 +9,7 @@ import { LoadingGuidance } from "./pages/LoadingGuidance";
 import { CalibrationHealth } from "./pages/CalibrationHealth";
 import { Dashboard } from "./pages/Dashboard";
 import { Finance } from "./pages/Finance";
+import { DataImport } from "./pages/DataImport";
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
 
         {/* Inti — Finansial & ROI (M6) */}
         <Route path="finance" element={<Finance />} />
-        <Route path="data" element={<ComingSoon title="Data / Import" note="Hadir di M7. Endpoint /api/import sudah aktif." />} />
+        <Route path="data" element={<DataImport />} />
 
         <Route path="*" element={<ComingSoon title="Halaman tak ditemukan" note="Periksa kembali navigasi sidebar." />} />
       </Route>

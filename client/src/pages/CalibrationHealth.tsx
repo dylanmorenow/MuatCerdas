@@ -1,6 +1,7 @@
 import { formatNumber } from "@muatcerdas/shared";
 import { useCalibration } from "../api/payload";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
+import { ExportButton } from "../components/ExportButton";
 
 export function CalibrationHealth() {
   const { data, isLoading, error, refetch } = useCalibration();
@@ -11,6 +12,15 @@ export function CalibrationHealth() {
       <PageHeader
         title="Calibration Health"
         subtitle="Status drift kalibrasi Payload Meter (PLM) HD785 — perlu kalibrasi bila |offset| > 5% atau usia > 90 hari."
+        actions={
+          data ? (
+            <ExportButton
+              filename="kalibrasi-hd785.csv"
+              headers={["unit", "kalibrasiTerakhir", "offsetPct", "usiaHari", "perluKalibrasi"]}
+              rows={data.map((r) => [r.unitId, r.lastCalibrationDate, r.scaleStudyOffsetPct, r.ageDays, r.needsCalibration ? "ya" : "tidak"])}
+            />
+          ) : undefined
+        }
       />
 
       {isLoading && <Loading />}

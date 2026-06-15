@@ -15,6 +15,7 @@ import {
 import { formatNumber, formatPersen, formatRupiah } from "@muatcerdas/shared";
 import { usePayloadAnalytics, type PayloadFilter, type PayloadStats, type GroupStat } from "../api/payload";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
+import { ExportButton } from "../components/ExportButton";
 
 const TARGET_KG = 91_000;
 const C_UNDER = "#f59e0b";
@@ -37,6 +38,15 @@ export function PayloadAnalytics() {
       <PageHeader
         title="Payload — Analitik"
         subtitle="Distribusi payload HD785 terhadap target 91 t: % under / ok / over, statistik, tren, dan kaitan overload."
+        actions={
+          data ? (
+            <ExportButton
+              filename="payload-per-unit.csv"
+              headers={["unit", "event", "meanKg", "underPct", "okPct", "overPct"]}
+              rows={data.byUnit.map((g) => [g.key, g.stats.count, Math.round(g.stats.mean), g.stats.underPct.toFixed(4), g.stats.okPct.toFixed(4), g.stats.overPct.toFixed(4)])}
+            />
+          ) : undefined
+        }
       />
 
       {isLoading && <Loading />}

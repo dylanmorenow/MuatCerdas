@@ -40,10 +40,10 @@
 - [x] Verifikasi AC FR-0002-12/13.
 
 ## M7 — Laporan, Data/Import UI, polish  ·  FR-0002-15, NFR
-- [ ] Layar **Data/Import** (unggah, validasi, kelola unit/operator/rute).
-- [ ] Ekspor laporan (PDF/CSV).
-- [ ] Tooltip glosarium (PRD §15), format angka Indonesia, responsif, validasi tahan-banting.
-- [ ] README: cara jalan + cara ganti data riil + screenshot. Cek Definition of Done (CLAUDE.md).
+- [x] Layar **Data/Import** (unggah, validasi, kelola unit/operator/rute).
+- [x] Ekspor laporan (PDF/CSV).
+- [x] Tooltip glosarium (PRD §15), format angka Indonesia, responsif, validasi tahan-banting.
+- [x] README: cara jalan + cara ganti data riil + screenshot. Cek Definition of Done (CLAUDE.md).
 
 ## M8 — (Opsional) Auth tipis  ·  FR-0002-16
 - [ ] Login satu organisasi (session/JWT), dapat dinonaktifkan via env untuk demo.

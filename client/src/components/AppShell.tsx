@@ -1,5 +1,7 @@
-// Kerangka aplikasi: sidebar navigasi (PRD §13) + header produk. Layar di <Outlet>.
-import { NavLink, Outlet } from "react-router-dom";
+// Kerangka aplikasi: sidebar navigasi (PRD §13) + header produk. Responsif: sidebar
+// jadi drawer (hamburger) di layar kecil, tetap di layar lebar.
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cx } from "./ui";
 
 interface NavItem {
@@ -39,9 +41,18 @@ const NAV: NavGroup[] = [
 ];
 
 export function AppShell() {
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  useEffect(() => setOpen(false), [location.pathname]);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="flex w-64 flex-shrink-0 flex-col bg-kpp-green text-white">
+      <aside
+        className={cx(
+          "fixed inset-y-0 left-0 z-40 w-64 flex-col bg-kpp-green text-white lg:static lg:flex",
+          open ? "flex" : "hidden lg:flex",
+        )}
+      >
         <div className="border-b border-white/10 px-5 py-5">
           <div className="text-lg font-bold">MuatCerdas</div>
           <div className="text-xs text-white/70">Tire &amp; Payload Intelligence — KPP</div>
@@ -49,9 +60,7 @@ export function AppShell() {
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
           {NAV.map((group) => (
             <div key={group.heading}>
-              <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                {group.heading}
-              </div>
+              <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">{group.heading}</div>
               <div className="mt-1.5 space-y-0.5">
                 {group.items.map((item) => (
                   <NavLink
@@ -77,8 +86,25 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="flex-1 overflow-x-hidden">
-        <main className="mx-auto max-w-6xl px-8 py-8">
+      {open && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setOpen(false)} />}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Buka menu"
+            className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <span className="font-bold text-kpp-green">MuatCerdas</span>
+        </header>
+
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
           <Outlet />
         </main>
       </div>

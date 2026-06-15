@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { formatRupiah, formatNumber } from "@muatcerdas/shared";
 import { useTireRecommendations } from "../api/tires";
 import { PageHeader, Card, Stat, Loading, ErrorState, InfoTip } from "../components/ui";
+import { ExportButton } from "../components/ExportButton";
 
 export function TireRecommendations() {
   const { data, isLoading, error, refetch } = useTireRecommendations();
@@ -12,6 +13,15 @@ export function TireRecommendations() {
       <PageHeader
         title="Tire — Rekomendasi"
         subtitle="Tindakan prioritas per unit untuk memperpanjang umur ban, beserta estimasi penghematan."
+        actions={
+          data ? (
+            <ExportButton
+              filename="tire-rekomendasi.csv"
+              headers={["unit", "model", "tindakan", "faktor", "alasan", "estimasiHematIdr"]}
+              rows={data.map((r) => [r.unitId, r.model, r.action, r.factor, r.reason, r.estimatedSavingsIdr])}
+            />
+          ) : undefined
+        }
       />
 
       {isLoading && <Loading />}

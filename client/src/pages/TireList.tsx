@@ -11,6 +11,7 @@ import {
   InfoTip,
   formatRemainingKm,
 } from "../components/ui";
+import { ExportButton } from "../components/ExportButton";
 
 function countBy(units: TireUnitSummary[], status: TireUnitSummary["status"]): number {
   return units.filter((u) => u.status === status).length;
@@ -25,6 +26,15 @@ export function TireList() {
       <PageHeader
         title="Tire — Daftar & Prediksi"
         subtitle="Sisa umur ban truk hauling (Scania / Volvo) di rute laterit CPP KM33 → Jetty, beserta tingkat keyakinan."
+        actions={
+          data ? (
+            <ExportButton
+              filename="tire-prediksi.csv"
+              headers={["unit", "model", "prediksiUmurKm", "sisaUmurKm", "intervalBawahKm", "intervalAtasKm", "keyakinan", "status"]}
+              rows={data.map((u) => [u.id, u.model, u.predictedLifeKm, u.remainingLifeKm, u.remainingLifeLowKm, u.remainingLifeHighKm, u.confidence, u.status])}
+            />
+          ) : undefined
+        }
       />
 
       {isLoading && <Loading />}

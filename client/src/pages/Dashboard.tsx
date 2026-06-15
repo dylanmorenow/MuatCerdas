@@ -1,16 +1,60 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatNumber, formatRupiah, formatPersen } from "@muatcerdas/shared";
 import { useDashboard } from "../api/finance";
 import { PageHeader, Card, Loading, ErrorState, InfoTip } from "../components/ui";
+import { downloadReportPdf, downloadCsv } from "../lib/export";
 
 export function Dashboard() {
   const { data, isLoading, error, refetch } = useDashboard();
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const exportCsv = () => {
+    if (!data) return;
+    const f = data.finance;
+    downloadCsv(
+      "kpi-muatcerdas.csv",
+      ["KPI", "Nilai"],
+      [
+        ["Biaya ban terhindarkan/th", Math.round(f.fleetCaptured)],
+        ["Biaya payload terhindarkan/th", Math.round(f.payloadAvoidable)],
+        ["Total penghematan/th", Math.round(f.annualSavings)],
+        ["Payback (bulan)", Number.isFinite(f.paybackMonths) ? f.paybackMonths.toFixed(2) : "-"],
+        ["ROI tahun-1", f.roiYear1.toFixed(4)],
+      ],
+    );
+  };
+  const exportPdf = async () => {
+    if (!data) return;
+    setPdfBusy(true);
+    try {
+      await downloadReportPdf(data);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Ringkasan biaya terhindarkan, penghematan & ROI — atas asumsi default (sesuaikan di Finansial)."
+        subtitle="Ringkasan biaya terhindarkan, penghematan & ROI — atas asumsi tersimpan (sesuaikan di Finansial)."
+        actions={
+          data ? (
+            <div className="flex items-center gap-2">
+              <button onClick={exportCsv} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+                Ekspor KPI (CSV)
+              </button>
+              <button
+                onClick={() => void exportPdf()}
+                disabled={pdfBusy}
+                className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90 disabled:opacity-50"
+              >
+                {pdfBusy ? "Menyiapkan…" : "Unduh Laporan (PDF)"}
+              </button>
+            </div>
+          ) : undefined
+        }
       />
 
       {isLoading && <Loading />}
