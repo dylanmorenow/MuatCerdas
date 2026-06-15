@@ -16,7 +16,9 @@
       "Bash(printf 'id,unitId,position,installDate,removalDate,kmAtRemoval,avgPressureDeviationPct,loadIndex,removalReason,costIdr\\\\nTR-BAD,HD-01,FL,2024-01-01,2024-09-01,80000,4,0.95,worn,20000000\\\\n')",
       "Bash(npm run *)",
       "PowerShell(Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"stopped PID $_\" } catch {} })",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\MSI Intel I7\\\\MuatCerdas\\\\server\\\\.env\"\\); \"First 3 bytes: $\\($bytes[0..2] -join ','\\)\"; \"BOM present: $\\($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF\\)\"; \"Total bytes: $\\($bytes.Length\\)\")",
+      "PowerShell(npm run dev)"
     ]
   }
 }
