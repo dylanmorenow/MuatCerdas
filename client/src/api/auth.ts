@@ -16,6 +16,19 @@ export function useAuthConfig() {
   });
 }
 
+export interface Me {
+  username: string | null;
+  role: string;
+  unitId: string | null;
+  name: string | null;
+  shift: string | null;
+}
+
+/** Identitas + peran dari token (admin/driver) — sumber routing peran. */
+export function useMe() {
+  return useQuery({ queryKey: ["me"], queryFn: () => apiGet<Me>("/api/auth/me"), staleTime: Infinity });
+}
+
 /** Login langsung (tak lewat handler 401 generik) → simpan token. */
 export async function login(username: string, password: string): Promise<void> {
   const res = await fetch("/api/auth/login", {

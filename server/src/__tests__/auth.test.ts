@@ -1,19 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { checkCredentials, type AuthConfig } from "../auth";
+import { isDriverAllowed } from "../auth";
 
-const cfg: AuthConfig = { enabled: true, username: "kpp", password: "rahasia", secret: "s" };
-
-describe("checkCredentials", () => {
-  it("kredensial benar → true", () => {
-    expect(checkCredentials("kpp", "rahasia", cfg)).toBe(true);
+describe("isDriverAllowed (penegakan peran driver, FR-0004-2)", () => {
+  it("driver boleh GET surface miliknya", () => {
+    expect(isDriverAllowed("GET", "/api/driver/me")).toBe(true);
+    expect(isDriverAllowed("GET", "/api/auth/me")).toBe(true);
+    expect(isDriverAllowed("GET", "/api/roadmap")).toBe(true);
   });
-  it("password salah → false", () => {
-    expect(checkCredentials("kpp", "salah", cfg)).toBe(false);
-  });
-  it("username salah → false", () => {
-    expect(checkCredentials("lain", "rahasia", cfg)).toBe(false);
-  });
-  it("password kosong selalu ditolak (walau config kosong)", () => {
-    expect(checkCredentials("kpp", "", { ...cfg, password: "" })).toBe(false);
+  it("driver TIDAK boleh layar admin / mutasi", () => {
+    expect(isDriverAllowed("GET", "/api/dashboard")).toBe(false);
+    expect(isDriverAllowed("GET", "/api/tires/units")).toBe(false);
+    expect(isDriverAllowed("PUT", "/api/roadmap/segment/SEG-1")).toBe(false);
+    expect(isDriverAllowed("POST", "/api/finance/params")).toBe(false);
   });
 });

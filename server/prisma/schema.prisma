@@ -166,3 +166,15 @@ model TkphCatalog {
   tireModel   String @id
   catalogTkph Float
 }
+
+// Modul D (M10) — pengguna & peran. Tipis: admin (akses penuh) / driver (satu unit).
+// password = kredensial DEMO (plain, didokumentasikan di README) — bukan manajemen user/RBAC kompleks.
+model User {
+  id       String  @id @default(cuid())
+  username String  @unique
+  password String
+  role     String // "admin" | "driver"
+  name     String
+  shift    String? // driver
+  unitId   String? // unit yang dikemudikan (driver)
+}

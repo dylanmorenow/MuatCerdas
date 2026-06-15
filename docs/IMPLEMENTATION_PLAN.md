@@ -55,6 +55,13 @@
 - [x] Layar **Speed Optimization** (client): banner AMAN/KONFLIK + opsi terukur, panel target & TKPH editable (recompute live), panduan driver (basis travel), tabel per-unit + HD785. Nav + route.
 - [x] Verifikasi: keputusan kanonik basis kerja-rata-rata; driver basis travel; SAFE→KONFLIK live; semua angka ASUMSI; tanpa feed live. JANGAN sentuh logika A/B — terpenuhi.
 
+## M10 — Modul D: RBAC + Driver Surface + Road Map  ·  docs/MODULE_D, FR-0004-1..7
+- [x] Auth + peran (`admin`/`driver`) via tabel `User` (migrasi `add_users`, seed admin+driver); JWT berisi role+unitId; penegakan peran (driver → 403 di luar surface-nya). FR-0004-1/2.
+- [x] **Driver Dashboard** (reuse Modul A/B/C, tanpa duplikasi logika): kecepatan maks, massa muatan, identitas, kondisi unit (ban/kalibrasi), target produksi, peta jalan. FR-0004-4.
+- [x] Admin surface = seluruh modul + Speed Monitor (M9) + Peta Jalan. FR-0004-3.
+- [x] Prototipe **Road Map** skematik (SVG) + segmen berwarna per kondisi + truk pemeta (lead/last) + adaptor `roadMapSource`; `conditionScore` editable (admin) → eksposur jalan Modul A berubah. FR-0004-5/6/7.
+- [x] Test (`conditionLabel`, `isDriverAllowed`, `pickMappers`) hijau; logika A/B/C tak tersentuh. Smoke admin/driver/peta. **Batas jujur: data simulasi, bukan LIDAR live.**
+
 ---
 
 ### Catatan jujur (untuk presentasi)

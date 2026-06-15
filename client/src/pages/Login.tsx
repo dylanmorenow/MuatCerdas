@@ -55,6 +55,12 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
         >
           {busy ? "Masuk…" : "Masuk"}
         </button>
+
+        <div className="mt-4 rounded-md bg-slate-50 p-2 text-[11px] text-slate-500">
+          <div className="font-medium text-slate-600">Akun demo:</div>
+          <div>admin — <span className="font-mono">kpp / muatcerdas</span></div>
+          <div>driver — <span className="font-mono">andi / andi123</span> (HD-01) · <span className="font-mono">budi / budi123</span> (HT-01)</div>
+        </div>
       </form>
     </div>
   );

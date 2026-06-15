@@ -10,6 +10,8 @@ import { payloadRoutes } from "./routes/payload";
 import { financeRoutes } from "./routes/finance";
 import { speedRoutes } from "./routes/speed";
 import { dataRoutes } from "./routes/data";
+import { driverRoutes } from "./routes/driver";
+import { roadmapRoutes } from "./routes/roadmap";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -30,6 +32,8 @@ async function main(): Promise<void> {
   await app.register(financeRoutes);
   await app.register(speedRoutes);
   await app.register(dataRoutes);
+  await app.register(driverRoutes);
+  await app.register(roadmapRoutes);
 
   try {
     await app.listen({ port: PORT, host: "0.0.0.0" });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cx } from "./ui";
-import { useAuthConfig, clearToken } from "../api/auth";
+import { useAuthConfig, useMe, clearToken } from "../api/auth";
 
 interface NavItem {
   to: string;
@@ -33,8 +33,11 @@ const NAV: NavGroup[] = [
     ],
   },
   {
-    heading: "Modul C — Kecepatan (TKPH)",
-    items: [{ to: "/speed", label: "Speed Optimization" }],
+    heading: "Modul C/D — Operasi",
+    items: [
+      { to: "/speed", label: "Speed Optimization" },
+      { to: "/roadmap", label: "Peta Jalan" },
+    ],
   },
   {
     heading: "Inti",
@@ -49,6 +52,7 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { data: authCfg } = useAuthConfig();
+  const { data: me } = useMe();
   useEffect(() => setOpen(false), [location.pathname]);
 
   return (
@@ -88,6 +92,11 @@ export function AppShell() {
           ))}
         </nav>
         <div className="border-t border-white/10 px-5 py-3">
+          {authCfg?.enabled && me?.username && (
+            <div className="mb-1.5 text-[11px] text-white/70">
+              Masuk: <span className="font-medium text-white">{me.name ?? me.username}</span> ({me.role})
+            </div>
+          )}
           {authCfg?.enabled && (
             <button
               onClick={() => {

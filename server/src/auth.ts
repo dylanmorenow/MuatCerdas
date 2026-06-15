@@ -1,14 +1,13 @@
-// Auth tipis satu organisasi (FR-0002-16). Default NONAKTIF (AUTH_ENABLED!=true) →
-// demo & alur lain tak terpengaruh. Saat aktif: JWT (@fastify/jwt), satu kredensial dari env.
-// Bukan manajemen user/RBAC (sengaja tipis — CLAUDE.md).
+// Auth tipis + peran (M10, FR-0004-1/2). Default NONAKTIF (AUTH_ENABLED!=true) → demo tanpa login.
+// Saat aktif: JWT (@fastify/jwt) + user dari DB (admin / driver). Driver dibatasi ke unitnya.
+// Bukan RBAC kompleks/multi-tenant (CLAUDE.md / MODULE_D §0).
 
 import type { FastifyInstance } from "fastify";
 import fastifyJwt from "@fastify/jwt";
+import { prisma } from "./db";
 
 export interface AuthConfig {
   enabled: boolean;
-  username: string;
-  password: string;
   secret: string;
 }
 
@@ -17,29 +16,47 @@ const DEV_SECRET = "dev-secret-ubah-di-produksi";
 export function authConfig(): AuthConfig {
   return {
     enabled: process.env.AUTH_ENABLED === "true",
-    username: process.env.AUTH_USERNAME ?? "kpp",
-    password: process.env.AUTH_PASSWORD ?? "muatcerdas",
     secret: process.env.AUTH_SECRET ?? DEV_SECRET,
   };
 }
 
-/** Validasi kredensial tunggal (murni, di-unit-test). */
-export function checkCredentials(username: string, password: string, cfg: AuthConfig): boolean {
-  return password.length > 0 && username === cfg.username && password === cfg.password;
+export interface AuthUser {
+  username: string;
+  role: string;
+  name: string;
+  shift: string | null;
+  unitId: string | null;
 }
 
-/** Path yang selalu publik (tak butuh token). */
-const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/config", "/api/auth/login"]);
+export interface TokenPayload {
+  sub: string;
+  role: string;
+  unitId: string | null;
+}
 
-/**
- * Register @fastify/jwt + (bila aktif) hook onRequest yang menegakkan token pada semua
- * route /api kecuali allowlist. Panggil SEBELUM register route bisnis.
- */
+/** Lookup user + cek password (plain — kredensial demo). null bila gagal. */
+export async function authenticateUser(username: string, password: string): Promise<AuthUser | null> {
+  if (!username || !password) return null;
+  const u = await prisma.user.findUnique({ where: { username } });
+  if (!u || u.password !== password) return null;
+  return { username: u.username, role: u.role, name: u.name, shift: u.shift, unitId: u.unitId };
+}
+
+/** Path publik (tak butuh token). */
+const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/config", "/api/auth/login"]);
+/** Path yang boleh diakses driver (hanya GET). Selain ini → 403 (FR-0004-2). */
+const DRIVER_GET_PATHS = new Set(["/api/auth/me", "/api/driver/me", "/api/roadmap"]);
+
+/** Apakah driver boleh mengakses (murni, di-unit-test). */
+export function isDriverAllowed(method: string, path: string): boolean {
+  return method === "GET" && DRIVER_GET_PATHS.has(path);
+}
+
 export async function registerAuth(app: FastifyInstance, cfg: AuthConfig): Promise<void> {
   await app.register(fastifyJwt, { secret: cfg.secret });
 
   if (!cfg.enabled) {
-    app.log.info("Auth NONAKTIF (set AUTH_ENABLED=true untuk mengaktifkan).");
+    app.log.info("Auth NONAKTIF (set AUTH_ENABLED=true untuk mengaktifkan peran admin/driver).");
     return;
   }
   if (cfg.secret === DEV_SECRET) {
@@ -54,6 +71,10 @@ export async function registerAuth(app: FastifyInstance, cfg: AuthConfig): Promi
       await request.jwtVerify();
     } catch {
       return reply.code(401).send({ error: "Tidak terautentikasi" });
+    }
+    const payload = request.user as unknown as TokenPayload;
+    if (payload.role === "driver" && !isDriverAllowed(request.method, path)) {
+      return reply.code(403).send({ error: "Akses ditolak untuk peran driver" });
     }
   });
 }

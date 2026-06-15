@@ -116,6 +116,7 @@ async function resetTables(): Promise<void> {
   await prisma.costParams.deleteMany();
   await prisma.speedParams.deleteMany();
   await prisma.tkphCatalog.deleteMany();
+  await prisma.user.deleteMany();
 }
 
 async function main(): Promise<void> {
@@ -345,6 +346,18 @@ async function main(): Promise<void> {
   await prisma.speedParams.create({ data: { id: 1, ...defaultSpeedParams } });
   await prisma.tkphCatalog.createMany({
     data: Object.entries(defaultTkphCatalog).map(([tireModel, catalogTkph]) => ({ tireModel, catalogTkph })),
+  });
+
+  // — Modul D (M10): User & peran. Admin (kredensial M8) + driver contoh (campur HD785 & haul). —
+  // Password = kredensial DEMO (plain) — lihat README. Aktif hanya bila AUTH_ENABLED=true.
+  await prisma.user.createMany({
+    data: [
+      { username: "kpp", password: "muatcerdas", role: "admin", name: "Admin KPP", shift: null, unitId: null },
+      { username: "andi", password: "andi123", role: "driver", name: "Andi Saputra", shift: "day", unitId: "HD-01" },
+      { username: "budi", password: "budi123", role: "driver", name: "Budi Santoso", shift: "night", unitId: "HT-01" },
+      { username: "citra", password: "citra123", role: "driver", name: "Citra Dewi", shift: "day", unitId: "HD-03" },
+      { username: "dedi", password: "dedi123", role: "driver", name: "Dedi Kurniawan", shift: "night", unitId: "HT-07" },
+    ],
   });
 
   // — Ringkasan —
