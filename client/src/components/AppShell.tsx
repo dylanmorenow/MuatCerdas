@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cx } from "./ui";
+import { useAuthConfig, clearToken } from "../api/auth";
 
 interface NavItem {
   to: string;
@@ -43,6 +44,7 @@ const NAV: NavGroup[] = [
 export function AppShell() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { data: authCfg } = useAuthConfig();
   useEffect(() => setOpen(false), [location.pathname]);
 
   return (
@@ -81,8 +83,19 @@ export function AppShell() {
             </div>
           ))}
         </nav>
-        <div className="border-t border-white/10 px-5 py-3 text-[10px] text-white/50">
-          Data contoh / import · bukan telematik live
+        <div className="border-t border-white/10 px-5 py-3">
+          {authCfg?.enabled && (
+            <button
+              onClick={() => {
+                clearToken();
+                window.location.reload();
+              }}
+              className="mb-2 w-full rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
+            >
+              Keluar
+            </button>
+          )}
+          <div className="text-[10px] text-white/50">Data contoh / import · bukan telematik live</div>
         </div>
       </aside>
 

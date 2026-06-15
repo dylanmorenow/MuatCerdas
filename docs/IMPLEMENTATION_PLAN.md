@@ -46,7 +46,7 @@
 - [x] README: cara jalan + cara ganti data riil + screenshot. Cek Definition of Done (CLAUDE.md).
 
 ## M8 — (Opsional) Auth tipis  ·  FR-0002-16
-- [ ] Login satu organisasi (session/JWT), dapat dinonaktifkan via env untuk demo.
+- [x] Login satu organisasi (session/JWT), dapat dinonaktifkan via env untuk demo.
 
 ---
 

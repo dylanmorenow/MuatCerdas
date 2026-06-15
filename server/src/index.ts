@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import { authConfig, registerAuth } from "./auth";
+import { authRoutes } from "./routes/auth";
 import { healthRoutes } from "./routes/health";
 import { importRoutes } from "./routes/import";
 import { tiresRoutes } from "./routes/tires";
@@ -15,6 +17,11 @@ async function main(): Promise<void> {
 
   await app.register(cors, { origin: true });
   await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } }); // 25 MB
+
+  // Auth tipis (opsional) — register JWT + hook penegak SEBELUM route bisnis.
+  await registerAuth(app, authConfig());
+  await app.register(authRoutes);
+
   await app.register(healthRoutes);
   await app.register(importRoutes);
   await app.register(tiresRoutes);

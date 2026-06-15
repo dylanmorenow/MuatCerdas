@@ -57,6 +57,16 @@ Buka layar **Data / Import**, pilih jenis data, unggah `.csv`/`.xlsx`. Validasi 
 
 Asumsi finansial (harga ban, capture rate, armada, dll.) editable di layar **Finansial & ROI** — default bertanda **ASUMSI**, tombol "Reset ke default" tersedia.
 
+## Auth (opsional)
+Default **nonaktif** — demo langsung jalan tanpa login. Untuk mewajibkan login satu organisasi, set di `server/.env`:
+```
+AUTH_ENABLED=true
+AUTH_USERNAME=kpp
+AUTH_PASSWORD=ganti-ini
+AUTH_SECRET=rahasia-jwt-ganti-di-produksi
+```
+Saat aktif: semua endpoint butuh `Authorization: Bearer <token>` (kecuali `/api/health` & `/api/auth/*`), dan client menampilkan layar login (token JWT berlaku 12 jam, tombol **Keluar** di sidebar). Kembalikan ke `AUTH_ENABLED=false` untuk demo. *Sengaja tipis: satu kredensial, bukan manajemen user/RBAC.*
+
 ## Definition of Done (CLAUDE.md)
 - [x] Semua FR "Must" lulus acceptance criteria PRD §8 (engine §12 + unit test penjaga).
 - [x] `client` & `server` jalan via satu perintah (`npm run dev`).

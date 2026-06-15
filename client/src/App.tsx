@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ComingSoon } from "./components/ui";
+import { useAuthConfig, getToken } from "./api/auth";
+import { Login } from "./pages/Login";
 import { TireList } from "./pages/TireList";
 import { TireUnitDetail } from "./pages/TireUnitDetail";
 import { TireRecommendations } from "./pages/TireRecommendations";
@@ -12,6 +15,12 @@ import { Finance } from "./pages/Finance";
 import { DataImport } from "./pages/DataImport";
 
 export default function App() {
+  const { data: authCfg, isLoading } = useAuthConfig();
+  const [authed, setAuthed] = useState(() => Boolean(getToken()));
+
+  if (isLoading) return null;
+  if (authCfg?.enabled && !authed) return <Login onSuccess={() => setAuthed(true)} />;
+
   return (
     <Routes>
       <Route element={<AppShell />}>
