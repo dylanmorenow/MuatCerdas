@@ -111,7 +111,7 @@ export function DriverDashboard() {
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe · data simulasi</span>
               </div>
               {roadMap ? (
-                <HazardMap data={roadMap} height={150} />
+                <HazardMap data={roadMap} />
               ) : (
                 <RoadMapStrip segments={data.roadMap.segments} mappers={data.roadMap.mappers} />
               )}

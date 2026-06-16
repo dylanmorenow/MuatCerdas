@@ -38,7 +38,7 @@ export function RoadMap() {
       />
 
       <Card>
-        <HazardMap data={data} height={170} />
+        <HazardMap data={data} />
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
           <Badge tone="slate">prototipe · data simulasi LiDAR</Badge>
           <span>bukan LiDAR live · {data.hazards.length} bahaya terdeteksi · terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>

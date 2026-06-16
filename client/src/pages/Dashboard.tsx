@@ -147,7 +147,7 @@ export function Dashboard() {
                 </h2>
                 <Link to="/roadmap" className="text-sm text-kpp-blue hover:underline">Buka peta →</Link>
               </div>
-              <HazardMap data={roadMap} height={150} />
+              <HazardMap data={roadMap} />
             </Card>
           )}
 

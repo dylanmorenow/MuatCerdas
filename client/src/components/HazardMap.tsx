@@ -1,74 +1,110 @@
 // Revisi F3 — peta bahaya jalan LiDAR (prototipe). Strip rute KM33→Jetty bersegmen (warna kondisi)
-// + penanda bahaya per posisi km (warna per tipe) + legenda. Data SIMULASI mewakili keluaran LiDAR
-// (device di truk pemeta lead/last) — BUKAN feed live.
+// + penanda bahaya per posisi km (warna per tipe) dgn penataan lane anti-tumpang-tindih + legenda.
+// Data SIMULASI mewakili keluaran LiDAR (truk pemeta lead/last) — BUKAN feed live.
 import { conditionColor, hazardColor, hazardLabel, type HazardType } from "@muatcerdas/shared";
 import type { RoadMapData } from "../api/roadmap";
 
-export function HazardMap({ data, height = 150 }: { data: RoadMapData; height?: number }) {
+const W = 760;
+const PAD = 14;
+const INNER_W = W - PAD * 2;
+const Y_KM = 14; // baris label KM / Jetty
+const Y_MAPPER = 28; // baris truk pemeta
+const LANE_TOP = 48; // lane penanda teratas
+const LANE_STEP = 13;
+const MAX_LANES = 5;
+const GAP = 15; // jarak min horizontal antar penanda dalam satu lane
+const BAR_H = 22;
+
+export function HazardMap({ data }: { data: RoadMapData }) {
   const { segments, hazards, mappers } = data;
   const total = data.routeLengthKm || segments.reduce((s, x) => s + x.lengthKm, 0) || 1;
-  const W = 760;
-  const pad = 12;
-  const innerW = W - pad * 2;
-  const stripY = 60;
-  const barH = 22;
+  const xOf = (km: number) => PAD + (Math.min(Math.max(km, 0), total) / total) * INNER_W;
 
-  // posisi awal km tiap segmen (untuk strip)
+  // Penataan lane: urut posisi, taruh tiap penanda di lane terendah yang masih cukup jarak.
+  const laneLastX: number[] = [];
+  const placed = [...hazards]
+    .map((h) => ({ ...h, x: xOf(h.positionKm) }))
+    .sort((a, b) => a.x - b.x)
+    .map((h) => {
+      let lane = laneLastX.findIndex((lx) => h.x - lx >= GAP);
+      if (lane === -1) {
+        if (laneLastX.length < MAX_LANES) {
+          lane = laneLastX.length;
+          laneLastX.push(h.x);
+        } else {
+          // semua lane penuh → pakai lane dgn ruang terbanyak (lastX terkecil)
+          lane = laneLastX.indexOf(Math.min(...laneLastX));
+          laneLastX[lane] = h.x;
+        }
+      } else {
+        laneLastX[lane] = h.x;
+      }
+      return { ...h, lane };
+    });
+  const lanesUsed = Math.max(1, laneLastX.length);
+  const stripY = LANE_TOP + lanesUsed * LANE_STEP + 4;
+  const totalH = stripY + BAR_H + 30;
+
+  // strip segmen
   let acc = 0;
   const rects = segments.map((s) => {
-    const x = pad + (acc / total) * innerW;
-    const w = (s.lengthKm / total) * innerW;
+    const x = PAD + (acc / total) * INNER_W;
+    const w = (s.lengthKm / total) * INNER_W;
     acc += s.lengthKm;
     return { ...s, x, w };
   });
 
-  // penanda bahaya: x dari positionKm; y jitter di atas strip agar tak menumpuk
-  const marks = hazards.map((h, i) => ({
-    ...h,
-    x: pad + (Math.min(h.positionKm, total) / total) * innerW,
-    y: 30 + ((i % 3) - 1) * 9,
-    r: 3 + Math.round(h.severity * 3),
-  }));
-
-  // legenda: tipe yang muncul + jumlah
+  // legenda
   const counts = new Map<HazardType, number>();
   for (const h of hazards) counts.set(h.type, (counts.get(h.type) ?? 0) + 1);
   const legend = [...counts.entries()].sort((a, b) => b[1] - a[1]);
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${height}`} className="w-full" role="img" aria-label="Peta bahaya jalan LiDAR KM33 → Jetty">
-        <text x={pad} y="14" fontSize="11" fontWeight="bold" fill="#334155">KM 33 (CPP)</text>
-        <text x={W - pad} y="14" fontSize="11" fontWeight="bold" fill="#334155" textAnchor="end">Jetty · PT Indexim Coalindo</text>
-        {mappers.leadUnitId && (
-          <text x={W - pad} y="26" fontSize="9" fill="#0E4D92" textAnchor="end">🚛 pemeta depan (LiDAR): {mappers.leadUnitId}</text>
-        )}
+      <svg viewBox={`0 0 ${W} ${totalH}`} className="w-full" role="img" aria-label="Peta bahaya jalan LiDAR KM33 → Jetty">
+        <text x={PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155">KM 33 (CPP)</text>
+        <text x={W - PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155" textAnchor="end">Jetty · PT Indexim Coalindo</text>
+
+        {/* truk pemeta — glyph rect (emoji tak konsisten render di SVG) */}
         {mappers.lastUnitId && (
-          <text x={pad} y="26" fontSize="9" fill="#0E4D92">🚛 pemeta belakang: {mappers.lastUnitId}</text>
+          <g>
+            <rect x={PAD} y={Y_MAPPER - 7} width="12" height="6" rx="1.5" fill="#0E4D92" />
+            <text x={PAD + 16} y={Y_MAPPER} fontSize="9" fill="#0E4D92">Pemeta belakang · {mappers.lastUnitId}</text>
+          </g>
+        )}
+        {mappers.leadUnitId && (
+          <g>
+            <text x={W - PAD - 16} y={Y_MAPPER} fontSize="9" fill="#0E4D92" textAnchor="end">Pemeta depan (LiDAR) · {mappers.leadUnitId}</text>
+            <rect x={W - PAD - 12} y={Y_MAPPER - 7} width="12" height="6" rx="1.5" fill="#0E4D92" />
+          </g>
         )}
 
-        {/* strip segmen */}
+        {/* strip segmen + label */}
         {rects.map((r) => (
           <g key={r.id}>
-            <rect x={r.x} y={stripY} width={Math.max(0, r.w - 2)} height={barH} rx="3" fill={conditionColor(r.conditionScore)} opacity={0.85} />
-            <text x={r.x + r.w / 2} y={stripY + barH + 13} fontSize="8.5" textAnchor="middle" fill="#475569">{r.name}</text>
-            <text x={r.x + r.w / 2} y={stripY + barH + 23} fontSize="8" textAnchor="middle" fill="#94a3b8">{r.condition} · {r.hazardCount} bahaya</text>
+            <rect x={r.x} y={stripY} width={Math.max(0, r.w - 2)} height={BAR_H} rx="4" fill={conditionColor(r.conditionScore)} opacity={0.9} />
+            <text x={r.x + r.w / 2} y={stripY + BAR_H + 13} fontSize="8.5" textAnchor="middle" fill="#475569">{r.name}</text>
+            <text x={r.x + r.w / 2} y={stripY + BAR_H + 23} fontSize="8" textAnchor="middle" fill="#94a3b8">{r.condition} · {r.hazardCount} bahaya</text>
           </g>
         ))}
 
-        {/* garis penghubung penanda → strip + penanda bahaya */}
-        {marks.map((m) => (
-          <g key={m.id}>
-            <line x1={m.x} y1={m.y + m.r} x2={m.x} y2={stripY} stroke="#cbd5e1" strokeWidth="0.8" />
-            <circle cx={m.x} cy={m.y} r={m.r} fill={hazardColor(m.type)} stroke="#fff" strokeWidth="1">
-              <title>{hazardLabel(m.type)} · KM {m.positionKm.toFixed(1)} · severity {(m.severity * 100).toFixed(0)}%</title>
-            </circle>
-          </g>
-        ))}
+        {/* penanda bahaya: stalk tipis ke strip + bulatan berwarna */}
+        {placed.map((m) => {
+          const my = LANE_TOP + m.lane * LANE_STEP;
+          const r = 3.4 + m.severity * 1.4;
+          return (
+            <g key={m.id}>
+              <line x1={m.x} y1={my} x2={m.x} y2={stripY} stroke="#e2e8f0" strokeWidth="0.8" />
+              <circle cx={m.x} cy={my} r={r} fill={hazardColor(m.type)} stroke="#fff" strokeWidth="1.3">
+                <title>{hazardLabel(m.type)} · KM {m.positionKm.toFixed(1)} · severity {(m.severity * 100).toFixed(0)}%</title>
+              </circle>
+            </g>
+          );
+        })}
       </svg>
 
       {/* legenda */}
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
         {legend.map(([type, n]) => (
           <span key={type} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hazardColor(type) }} />
