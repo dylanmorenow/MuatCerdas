@@ -124,22 +124,23 @@ export function Finance() {
 
         {/* Hasil live */}
         <div className="space-y-4">
-          <Card className="bg-kpp-green text-white">
-            <div className="text-xs uppercase tracking-wide text-white/70">Total penghematan / tahun</div>
-            <div className="mt-1 text-2xl font-bold">{formatRupiah(summary.annualSavings)}</div>
+          {/* <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
+          <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Total penghematan / tahun</div>
+            <div className="mt-1 text-2xl font-bold text-white">{formatRupiah(summary.annualSavings)}</div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-white/70">Payback</div>
-                <div className="text-lg font-semibold">
+                <div className="text-xs text-emerald-100">Payback</div>
+                <div className="text-lg font-semibold text-white">
                   {Number.isFinite(summary.paybackMonths) ? `${formatNumber(summary.paybackMonths, 1)} bln` : "—"}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-white/70">ROI tahun-1</div>
-                <div className="text-lg font-semibold">{formatPersen(summary.roiYear1)}</div>
+                <div className="text-xs text-emerald-100">ROI tahun-1</div>
+                <div className="text-lg font-semibold text-white">{formatPersen(summary.roiYear1)}</div>
               </div>
             </div>
-          </Card>
+          </div>
 
           <Card>
             <h2 className="mb-3 font-semibold text-slate-800">Rincian (§12.7–§12.9)</h2>

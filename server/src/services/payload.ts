@@ -104,6 +104,39 @@ export interface GroupStat {
   stats: PayloadStats;
 }
 
+export interface ShiftOperators {
+  day: string | null;
+  night: string | null;
+}
+
+/** Operator dominan per unit per shift (1=day, 2=night) — 1 unit dipegang 1 orang/shift (murni). */
+export function deriveUnitShiftOperators(
+  events: { unitId: string; operatorId: string }[],
+  operators: { id: string; name: string; shift: string }[],
+): Record<string, ShiftOperators> {
+  const opById = new Map(operators.map((o) => [o.id, o]));
+  const counts = new Map<string, Map<string, number>>();
+  for (const e of events) {
+    const m = counts.get(e.unitId) ?? new Map<string, number>();
+    m.set(e.operatorId, (m.get(e.operatorId) ?? 0) + 1);
+    counts.set(e.unitId, m);
+  }
+  const out: Record<string, ShiftOperators> = {};
+  for (const [unitId, m] of counts) {
+    let day: { name: string; c: number } | null = null;
+    let night: { name: string; c: number } | null = null;
+    for (const [opId, c] of m) {
+      const o = opById.get(opId);
+      if (!o) continue;
+      if (o.shift === "day") {
+        if (!day || c > day.c) day = { name: o.name, c };
+      } else if (!night || c > night.c) night = { name: o.name, c };
+    }
+    out[unitId] = { day: day?.name ?? null, night: night?.name ?? null };
+  }
+  return out;
+}
+
 export interface PayloadAnalytics {
   targetKg: number;
   filter: PayloadAnalyticsFilter;
@@ -115,6 +148,8 @@ export interface PayloadAnalytics {
   overloadWear: OverloadWearResult;
   units: { id: string }[];
   operators: { id: string; name: string }[];
+  /** Operator pemegang per unit per shift (FR revisi Modul B). */
+  shiftOperatorsByUnit: Record<string, ShiftOperators>;
 }
 
 /** SR-V3: payload analytics HANYA untuk HD785 (pit_dumper). */
@@ -122,7 +157,7 @@ export async function getPayloadAnalytics(filter: PayloadAnalyticsFilter = {}): 
   const [rawEvents, units, operators] = await Promise.all([
     prisma.payloadEvent.findMany({ where: { unit: { category: "pit_dumper" } } }),
     prisma.unit.findMany({ where: { category: "pit_dumper" }, select: { id: true } }),
-    prisma.operator.findMany({ select: { id: true, name: true } }),
+    prisma.operator.findMany({ select: { id: true, name: true, shift: true } }),
   ]);
   const costParams = await loadCostParams();
 
@@ -170,7 +205,8 @@ export async function getPayloadAnalytics(filter: PayloadAnalyticsFilter = {}): 
     histogram: payloadHistogram(filtered),
     overloadWear: overloadWearCost(events, costParams), // per-unit, penuh
     units,
-    operators,
+    operators: operators.map((o) => ({ id: o.id, name: o.name })),
+    shiftOperatorsByUnit: deriveUnitShiftOperators(events, operators),
   };
 }
 
@@ -182,12 +218,14 @@ export interface CalibrationHealthRow {
   needsCalibration: boolean;
 }
 
-/** Kesehatan kalibrasi HD785 (§12.6). */
+/** Kesehatan kalibrasi HD785 (§12.6). Ambil kalibrasi TERBARU per unit. */
 export async function getCalibrationHealth(today = new Date()): Promise<CalibrationHealthRow[]> {
-  const records = await prisma.calibrationRecord.findMany({
+  const all = await prisma.calibrationRecord.findMany({
     where: { unit: { category: "pit_dumper" } },
-    orderBy: { unitId: "asc" },
+    orderBy: { lastCalibrationDate: "desc" },
   });
+  const seen = new Set<string>();
+  const records = all.filter((r) => (seen.has(r.unitId) ? false : (seen.add(r.unitId), true)));
   return records
     .map((r) => {
       const rec = {
@@ -204,4 +242,32 @@ export async function getCalibrationHealth(today = new Date()): Promise<Calibrat
       };
     })
     .sort((a, b) => Number(b.needsCalibration) - Number(a.needsCalibration) || b.ageDays - a.ageDays);
+}
+
+/** Catat kalibrasi baru (admin) — pilih unit HD785 + tanggal + offset. SR-V3: hanya pit_dumper. */
+export async function addCalibration(input: {
+  unitId: string;
+  lastCalibrationDate: string;
+  scaleStudyOffsetPct: number;
+}): Promise<CalibrationHealthRow> {
+  const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
+  if (!unit || unit.category !== "pit_dumper") {
+    throw new Error(`Unit '${input.unitId}' bukan HD785 (pit_dumper) — kalibrasi hanya HD785 (SR-V3)`);
+  }
+  const date = new Date(input.lastCalibrationDate);
+  if (Number.isNaN(date.getTime())) throw new Error("Tanggal kalibrasi tak valid");
+  const offset = Number(input.scaleStudyOffsetPct);
+  if (!Number.isFinite(offset)) throw new Error("Offset harus angka");
+  await prisma.calibrationRecord.create({
+    data: { unitId: input.unitId, lastCalibrationDate: date, scaleStudyOffsetPct: offset },
+  });
+  const today = new Date();
+  const rec = { unitId: input.unitId, lastCalibrationDate: date.toISOString(), scaleStudyOffsetPct: offset };
+  return {
+    unitId: input.unitId,
+    lastCalibrationDate: date.toISOString().slice(0, 10),
+    scaleStudyOffsetPct: offset,
+    ageDays: calibrationAgeDays(rec, today),
+    needsCalibration: needsCalibration(rec, today),
+  };
 }

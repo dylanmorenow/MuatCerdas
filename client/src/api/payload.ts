@@ -1,6 +1,6 @@
 // Hook TanStack Query untuk Modul B (Payload). Tipe mengikuti server services/payload.ts.
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "./client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiSend } from "./client";
 
 export interface PayloadStats {
   count: number;
@@ -56,6 +56,7 @@ export interface PayloadAnalytics {
   overloadWear: { byUnit: UnitOverloadWear[]; total: number };
   units: { id: string }[];
   operators: { id: string; name: string }[];
+  shiftOperatorsByUnit: Record<string, { day: string | null; night: string | null }>;
 }
 
 export interface CalibrationRow {
@@ -86,5 +87,17 @@ export function useCalibration() {
   return useQuery({
     queryKey: ["payload-calibration"],
     queryFn: () => apiGet<CalibrationRow[]>("/api/payload/calibration"),
+  });
+}
+
+export function useAddCalibration() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { unitId: string; lastCalibrationDate: string; scaleStudyOffsetPct: number }) =>
+      apiSend<CalibrationRow>("/api/payload/calibration", "POST", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["payload-calibration"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }

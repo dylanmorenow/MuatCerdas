@@ -1,11 +1,13 @@
+import { useMemo, useState } from "react";
 import { formatNumber } from "@muatcerdas/shared";
-import { useCalibration } from "../api/payload";
+import { useCalibration, useAddCalibration } from "../api/payload";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
 import { ExportButton } from "../components/ExportButton";
 
 export function CalibrationHealth() {
   const { data, isLoading, error, refetch } = useCalibration();
   const needs = data?.filter((r) => r.needsCalibration).length ?? 0;
+  const unitIds = useMemo(() => (data ? [...new Set(data.map((r) => r.unitId))].sort() : []), [data]);
 
   return (
     <>
@@ -33,6 +35,8 @@ export function CalibrationHealth() {
             <Stat label="Perlu kalibrasi" value={<span className="text-red-600">{needs}</span>} hint="offset/usia di luar ambang" />
             <Stat label="Terkalibrasi baik" value={<span className="text-emerald-600">{data.length - needs}</span>} />
           </div>
+
+          <CalibrationForm unitIds={unitIds} />
 
           <Card className="overflow-hidden p-0">
             <table className="w-full text-sm">
@@ -78,5 +82,86 @@ export function CalibrationHealth() {
         </>
       )}
     </>
+  );
+}
+
+function CalibrationForm({ unitIds }: { unitIds: string[] }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [unitId, setUnitId] = useState("");
+  const [date, setDate] = useState(today);
+  const [offset, setOffset] = useState("0");
+  const add = useAddCalibration();
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!unitId) return;
+    add.mutate(
+      { unitId, lastCalibrationDate: date, scaleStudyOffsetPct: Number(offset) },
+      {
+        onSuccess: () => {
+          setOffset("0");
+          setDate(today);
+        },
+      },
+    );
+  };
+
+  return (
+    <Card className="mb-5">
+      <h2 className="mb-1 font-semibold text-slate-800">
+        Catat kalibrasi baru
+        <InfoTip text="Mencatat kalibrasi ulang PLM HD785: unit, tanggal kalibrasi, dan offset skala (%) dari studi. Status drift dihitung ulang otomatis." />
+      </h2>
+      <p className="mb-3 text-xs text-slate-400">Hanya unit HD785 (pit_dumper). Data contoh/manual — bukan feed timbangan live.</p>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">Unit (HD785)</span>
+          <select
+            value={unitId}
+            onChange={(e) => setUnitId(e.target.value)}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            required
+          >
+            <option value="">Pilih unit…</option>
+            {unitIds.map((id) => (
+              <option key={id} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">Tanggal kalibrasi</span>
+          <input
+            type="date"
+            value={date}
+            max={today}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            required
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">Offset skala (%)</span>
+          <input
+            type="number"
+            step="0.1"
+            value={offset}
+            onChange={(e) => setOffset(e.target.value)}
+            className="w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            required
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={add.isPending || !unitId}
+          className="rounded-md bg-kpp-green px-4 py-2 text-sm font-medium text-white hover:bg-kpp-green/90 disabled:opacity-50"
+        >
+          {add.isPending ? "Menyimpan…" : "Simpan kalibrasi"}
+        </button>
+        {add.isError && <span className="text-sm text-red-600">{(add.error as Error).message}</span>}
+        {add.isSuccess && <span className="text-sm text-emerald-600">Tersimpan ✓</span>}
+      </form>
+    </Card>
   );
 }

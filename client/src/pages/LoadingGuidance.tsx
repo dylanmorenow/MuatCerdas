@@ -40,8 +40,8 @@ export function LoadingGuidance() {
   return (
     <>
       <PageHeader
-        title="Loading Guidance"
-        subtitle="Panduan pemuatan HD785 ke target 91 t: kebijakan pemuatan + indikator pemuatan hijau/kuning/merah."
+        title="Mass Monitoring"
+        subtitle="Pemantauan massa muatan HD785 ke target 91 t: kebijakan pemuatan + indikator hijau/kuning/merah. (Laporan real-time per unit dari input operator — menyusul.)"
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

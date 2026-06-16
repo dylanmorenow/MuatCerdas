@@ -24,3 +24,8 @@ export function formatPersen(fraction: number, maxFractionDigits = 1): string {
     maximumFractionDigits: maxFractionDigits,
   }).format(fraction);
 }
+
+/** Massa kg → ton: 91000 → "91 t" (satuan acuan = metric ton). */
+export function formatTon(kg: number, maxFractionDigits = 1): string {
+  return `${formatNumber(kg / 1000, maxFractionDigits)} t`;
+}

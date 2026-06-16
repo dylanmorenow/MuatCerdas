@@ -28,7 +28,7 @@ const NAV: NavGroup[] = [
     heading: "Modul B — Payload (HD785)",
     items: [
       { to: "/payload", label: "Analitik" },
-      { to: "/payload/guidance", label: "Loading Guidance" },
+      { to: "/payload/mass", label: "Mass Monitoring" },
       { to: "/calibration", label: "Calibration Health" },
     ],
   },

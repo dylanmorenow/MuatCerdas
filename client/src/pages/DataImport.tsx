@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { formatNumber } from "@muatcerdas/shared";
+import { formatNumber, formatTon } from "@muatcerdas/shared";
 import { useInventory, useImport } from "../api/data";
 import { downloadCsv } from "../lib/export";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
@@ -183,7 +183,7 @@ export function DataImport() {
                         </Badge>
                       </td>
                       <td className="px-4 py-1.5 text-slate-600">{u.model}</td>
-                      <td className="px-4 py-1.5 text-slate-500">{formatNumber(u.ratedPayloadKg)} kg</td>
+                      <td className="px-4 py-1.5 text-slate-500">{formatTon(u.ratedPayloadKg)}</td>
                       <td className="px-4 py-1.5 text-slate-500">{u.tiresCount}</td>
                     </tr>
                   ))}

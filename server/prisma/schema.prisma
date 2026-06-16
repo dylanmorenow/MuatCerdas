@@ -22,6 +22,7 @@ model Unit {
   tireModel      String?
   tirePriceIdr   Float?
   kmPerYear      Float?
+  material       String? // HD785: "coal" | "overburden" (Modul B/Dashboard quota); null utk haul
 
   tireRecords   TireRecord[]
   tripLogs      TripLog[]
@@ -177,4 +178,13 @@ model User {
   name     String
   shift    String? // driver
   unitId   String? // unit yang dikemudikan (driver)
+}
+
+// Parameter operasional (Dashboard reframe — kerugian/risiko). Settings id=1. ASUMSI baru,
+// TERPISAH dari CostParams agar sanity finansial §8 tak tersentuh.
+model OpsParams {
+  id                             Int   @id @default(1)
+  downtimeDaysPerCriticalUnit    Float
+  productionValuePerUnitPerDayIdr Float
+  dailyCoalTargetT               Float
 }

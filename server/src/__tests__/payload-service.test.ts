@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { payloadTrend, payloadHistogram } from "../services/payload";
+import { payloadTrend, payloadHistogram, deriveUnitShiftOperators } from "../services/payload";
 import type { PayloadEvent } from "@muatcerdas/shared";
 
 const T = 91_000;
@@ -55,5 +55,27 @@ describe("payloadHistogram (helper murni)", () => {
 
   it("total bin = jumlah event", () => {
     expect(h.reduce((s, b) => s + b.count, 0)).toBe(events.length);
+  });
+});
+
+describe("deriveUnitShiftOperators (operator per unit per shift)", () => {
+  const operators = [
+    { id: "OP-1", name: "Andi", shift: "day" },
+    { id: "OP-2", name: "Budi", shift: "night" },
+    { id: "OP-3", name: "Citra", shift: "day" },
+  ];
+  it("ambil operator dominan per shift per unit", () => {
+    const events = [
+      { unitId: "HD-1", operatorId: "OP-1" },
+      { unitId: "HD-1", operatorId: "OP-1" },
+      { unitId: "HD-1", operatorId: "OP-3" }, // day minor
+      { unitId: "HD-1", operatorId: "OP-2" }, // night
+    ];
+    const r = deriveUnitShiftOperators(events, operators);
+    expect(r["HD-1"]).toEqual({ day: "Andi", night: "Budi" });
+  });
+  it("shift tanpa operator → null", () => {
+    const r = deriveUnitShiftOperators([{ unitId: "HD-2", operatorId: "OP-1" }], operators);
+    expect(r["HD-2"]).toEqual({ day: "Andi", night: null });
   });
 });

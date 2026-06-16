@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ComingSoon } from "./components/ui";
 import { useAuthConfig, useMe, getToken } from "./api/auth";
@@ -48,7 +48,8 @@ function AdminApp() {
 
         {/* Modul B — Payload */}
         <Route path="payload" element={<PayloadAnalytics />} />
-        <Route path="payload/guidance" element={<LoadingGuidance />} />
+        <Route path="payload/mass" element={<LoadingGuidance />} />
+        <Route path="payload/guidance" element={<Navigate to="/payload/mass" replace />} />
         <Route path="calibration" element={<CalibrationHealth />} />
 
         {/* Modul C — Kecepatan/TKPH + Modul D — Peta */}

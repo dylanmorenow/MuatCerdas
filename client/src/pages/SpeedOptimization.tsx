@@ -198,18 +198,19 @@ export function SpeedOptimization() {
 
         {/* Panduan driver + ringkasan */}
         <div className="space-y-4">
-          <Card className="bg-kpp-green text-white">
-            <div className="text-xs uppercase tracking-wide text-white/70">Panduan driver — kecepatan maks</div>
-            <div className="mt-1 text-3xl font-bold">{kmh(vmaxTravel)}</div>
-            <div className="mt-1 text-xs text-white/80">
+          {/* Pakai <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
+          <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Panduan driver — kecepatan maks</div>
+            <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravel)}</div>
+            <div className="mt-1 text-xs text-emerald-50">
               basis travel (spidometer). Setara {kmh(vmaxWork)} kerja rata-rata.
             </div>
-            <div className="mt-3 border-t border-white/20 pt-3 text-sm text-white/90">
+            <div className="mt-3 border-t border-white/30 pt-3 text-sm text-emerald-50">
               {conflict
                 ? "Target sekarang menuntut kecepatan di atas batas ban — turunkan beban/target, jangan ngebut."
                 : "Jalan pada rekomendasi; jaga ≤ batas agar ban awet."}
             </div>
-          </Card>
+          </div>
 
           <Card>
             <h2 className="mb-2 font-semibold text-slate-800">Rekonsiliasi satuan (§C.5)</h2>

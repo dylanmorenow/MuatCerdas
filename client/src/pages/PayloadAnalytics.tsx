@@ -12,9 +12,9 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { formatNumber, formatPersen, formatRupiah } from "@muatcerdas/shared";
-import { usePayloadAnalytics, type PayloadFilter, type PayloadStats, type GroupStat } from "../api/payload";
-import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
+import { formatNumber, formatPersen, formatTon } from "@muatcerdas/shared";
+import { usePayloadAnalytics, type PayloadFilter, type GroupStat } from "../api/payload";
+import { PageHeader, Card, Stat, Loading, ErrorState, InfoTip } from "../components/ui";
 import { ExportButton } from "../components/ExportButton";
 
 const TARGET_KG = 91_000;
@@ -37,13 +37,22 @@ export function PayloadAnalytics() {
     <>
       <PageHeader
         title="Payload — Analitik"
-        subtitle="Distribusi payload HD785 terhadap target 91 t: % under / ok / over, statistik, tren, dan kaitan overload."
+        subtitle="Distribusi payload HD785 terhadap target 91 t: % under / ok / over, statistik, dan tren — per unit & operator (shift 1 & 2)."
         actions={
           data ? (
             <ExportButton
               filename="payload-per-unit.csv"
-              headers={["unit", "event", "meanKg", "underPct", "okPct", "overPct"]}
-              rows={data.byUnit.map((g) => [g.key, g.stats.count, Math.round(g.stats.mean), g.stats.underPct.toFixed(4), g.stats.okPct.toFixed(4), g.stats.overPct.toFixed(4)])}
+              headers={["unit", "operatorShift1", "operatorShift2", "event", "meanT", "underPct", "okPct", "overPct"]}
+              rows={data.byUnit.map((g) => [
+                g.key,
+                data.shiftOperatorsByUnit[g.key]?.day ?? "-",
+                data.shiftOperatorsByUnit[g.key]?.night ?? "-",
+                g.stats.count,
+                (g.stats.mean / 1000).toFixed(1),
+                g.stats.underPct.toFixed(4),
+                g.stats.okPct.toFixed(4),
+                g.stats.overPct.toFixed(4),
+              ])}
             />
           ) : undefined
         }
@@ -98,7 +107,7 @@ export function PayloadAnalytics() {
 
           {/* KPI */}
           <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Stat label="Event payload" value={formatNumber(data.overall.count)} hint={`rata-rata ${formatNumber(Math.round(data.overall.mean))} kg`} />
+            <Stat label="Event payload" value={formatNumber(data.overall.count)} hint={`rata-rata ${formatTon(data.overall.mean)}`} />
             <Stat label="Under (<95%)" value={<span className="text-amber-600">{formatPersen(data.overall.underPct)}</span>} hint={`${formatNumber(data.overall.underCount)} event`} />
             <Stat label="OK (95–110%)" value={<span className="text-emerald-600">{formatPersen(data.overall.okPct)}</span>} hint={`${formatNumber(data.overall.okCount)} event`} />
             <Stat label="Over (>110%)" value={<span className="text-red-600">{formatPersen(data.overall.overPct)}</span>} hint={`${formatNumber(data.overall.overCount)} event`} />
@@ -138,7 +147,7 @@ export function PayloadAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(d: string) => d.slice(5)} minTickGap={24} />
                     <YAxis domain={["dataMin - 3000", "dataMax + 3000"]} tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${Math.round(v / 1000)}t`} />
-                    <Tooltip formatter={(v) => [`${formatNumber(Number(v))} kg`, "Rata-rata"]} />
+                    <Tooltip formatter={(v) => [formatTon(Number(v)), "Rata-rata"]} />
                     <ReferenceLine y={TARGET_KG} stroke="#0E4D92" strokeDasharray="4 4" label={{ value: "91 t", fontSize: 10, fill: "#0E4D92" }} />
                     <Line type="monotone" dataKey="mean" stroke="#0E4D92" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -147,60 +156,27 @@ export function PayloadAnalytics() {
             </Card>
           </div>
 
-          {/* Breakdown + overload */}
+          {/* Breakdown per unit (dengan operator shift 1 & 2) + per operator */}
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <BreakdownTable title="Per unit (HD785)" rows={data.byUnit} />
+            <BreakdownTable title="Per unit (HD785)" rows={data.byUnit} shiftOperators={data.shiftOperatorsByUnit} />
             <BreakdownTable title="Per operator" rows={data.byOperator} />
           </div>
-
-          {/* Overload → keausan */}
-          <Card className="mt-5">
-            <div className="mb-1 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-800">
-                Kaitan overload → keausan
-                <InfoTip text="overloadRate = #over / #event per unit (§12.4). Biaya = rate × faktor keausan." />
-              </h2>
-              <Badge tone="slate">Faktor keausan = Rp0 (asumsi)</Badge>
-            </div>
-            <p className="mb-3 text-xs text-slate-400">
-              Biaya Rupiah masih 0 hingga faktor keausan disetel di Finansial (M6). overloadRate adalah sinyal nyata per unit.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-2 py-2 font-medium">Unit</th>
-                    <th className="px-2 py-2 font-medium">Event</th>
-                    <th className="px-2 py-2 font-medium">Over</th>
-                    <th className="px-2 py-2 font-medium">Overload rate</th>
-                    <th className="px-2 py-2 text-right font-medium">Biaya keausan/th</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {data.overloadWear.byUnit.map((u) => (
-                    <tr key={u.unitId}>
-                      <td className="px-2 py-2 font-medium text-slate-700">{u.unitId}</td>
-                      <td className="px-2 py-2 text-slate-500">{formatNumber(u.events)}</td>
-                      <td className="px-2 py-2 text-slate-500">{formatNumber(u.overEvents)}</td>
-                      <td className="px-2 py-2">
-                        <span className={u.overloadRate > 0.1 ? "font-medium text-red-600" : "text-slate-700"}>
-                          {formatPersen(u.overloadRate)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-right text-slate-400">{formatRupiah(u.costIdr)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
         </>
       )}
     </>
   );
 }
 
-function BreakdownTable({ title, rows }: { title: string; rows: GroupStat[] }) {
+function BreakdownTable({
+  title,
+  rows,
+  shiftOperators,
+}: {
+  title: string;
+  rows: GroupStat[];
+  shiftOperators?: Record<string, { day: string | null; night: string | null }>;
+}) {
+  const showShift = Boolean(shiftOperators);
   return (
     <Card className="overflow-hidden p-0">
       <div className="border-b border-slate-200 px-5 py-3">
@@ -211,6 +187,18 @@ function BreakdownTable({ title, rows }: { title: string; rows: GroupStat[] }) {
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">{title.includes("operator") ? "Operator" : "Unit"}</th>
+              {showShift && (
+                <>
+                  <th className="px-4 py-2.5 font-medium">
+                    Shift 1
+                    <InfoTip text="Operator dominan shift siang (day) untuk unit ini, dari log payload." />
+                  </th>
+                  <th className="px-4 py-2.5 font-medium">
+                    Shift 2
+                    <InfoTip text="Operator dominan shift malam (night) untuk unit ini, dari log payload." />
+                  </th>
+                </>
+              )}
               <th className="px-4 py-2.5 font-medium">Event</th>
               <th className="px-4 py-2.5 font-medium">Mean</th>
               <th className="px-4 py-2.5 font-medium">Under</th>
@@ -222,8 +210,14 @@ function BreakdownTable({ title, rows }: { title: string; rows: GroupStat[] }) {
             {rows.map((r) => (
               <tr key={r.key} className="hover:bg-slate-50">
                 <td className="px-4 py-2.5 font-medium text-slate-700">{r.label}</td>
+                {showShift && (
+                  <>
+                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.day ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.night ?? "—"}</td>
+                  </>
+                )}
                 <td className="px-4 py-2.5 text-slate-500">{formatNumber(r.stats.count)}</td>
-                <td className="px-4 py-2.5 text-slate-600">{formatNumber(Math.round(r.stats.mean))}</td>
+                <td className="px-4 py-2.5 text-slate-600">{formatTon(r.stats.mean)}</td>
                 <td className="px-4 py-2.5 text-amber-600">{formatPersen(r.stats.underPct)}</td>
                 <td className="px-4 py-2.5 text-emerald-600">{formatPersen(r.stats.okPct)}</td>
                 <td className="px-4 py-2.5 text-red-600">{formatPersen(r.stats.overPct)}</td>

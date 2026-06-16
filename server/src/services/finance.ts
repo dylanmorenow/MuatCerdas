@@ -6,11 +6,27 @@ import {
   tireAvoidableCost,
   costParamsSchema,
   defaultCostParams,
+  tireReplacementCostIdr,
+  productionLossIdr,
+  coalQuota,
+  defaultOpsParams,
   type CostParams,
+  type OpsParams,
+  type CoalQuota,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { getTireUnits } from "./tire";
 import { getPayloadAnalytics, getCalibrationHealth } from "./payload";
+
+/** Estimasi trip/hari per HD785 (ASUMSI F1; F2 memakai MassInput nyata). */
+const ASSUMED_TRIPS_PER_DAY = 8;
+
+async function loadOpsParams(): Promise<OpsParams> {
+  const row = await prisma.opsParams.findUnique({ where: { id: 1 } });
+  if (!row) return defaultOpsParams;
+  const { id: _id, ...p } = row;
+  return p;
+}
 
 // ——————————————————————————————————————————————————————————————
 // Helper MURNI
@@ -150,14 +166,18 @@ export interface DashboardData {
   tire: { totalUnits: number; ok: number; warn: number; critical: number; avgPredictedLifeKm: number };
   payload: { count: number; underPct: number; okPct: number; overPct: number; meanKg: number };
   calibration: { total: number; needs: number };
+  /** Metrik operasional (kerugian/risiko) — Dashboard reframe. */
+  ops: { tireReplacementCostIdr: number; productionLossIdr: number; coalQuota: CoalQuota };
 }
 
 export async function getDashboard(): Promise<DashboardData> {
-  const [params, tireUnits, payload, calib] = await Promise.all([
+  const [params, opsParams, tireUnits, payload, calib, coalUnits] = await Promise.all([
     loadCostParams(),
+    loadOpsParams(),
     getTireUnits(),
     getPayloadAnalytics(),
     getCalibrationHealth(),
+    prisma.unit.findMany({ where: { category: "pit_dumper", material: "coal" }, select: { id: true } }),
   ]);
   const overloadRateSum = await overloadRateSumFrom(payload);
   const finance = computeFinanceKpis(params, overloadRateSum);
@@ -166,16 +186,27 @@ export async function getDashboard(): Promise<DashboardData> {
   const avgPredictedLifeKm = predicted.length
     ? Math.round(predicted.reduce((a, b) => a + b, 0) / predicted.length)
     : 0;
+  const criticalCount = tireUnits.filter((u) => u.status === "critical").length;
+
+  // Kuota coal harian (F1: estimasi dari rata-rata payload coal HD785 × trip/hari; F2: MassInput nyata).
+  const coalIds = new Set(coalUnits.map((u) => u.id));
+  const coalMeanTotalT = payload.byUnit.filter((g) => coalIds.has(g.key)).reduce((s, g) => s + g.stats.mean, 0) / 1000;
+  const coalLoadedT = Math.round(coalMeanTotalT * ASSUMED_TRIPS_PER_DAY);
 
   return {
     finance,
     capexIdr: params.capexIdr,
     opexAnnualIdr: params.opexAnnualIdr,
+    ops: {
+      tireReplacementCostIdr: tireReplacementCostIdr(criticalCount, params.tiresPerUnit, params.tirePriceIdr),
+      productionLossIdr: productionLossIdr(criticalCount, opsParams),
+      coalQuota: coalQuota(coalLoadedT, opsParams),
+    },
     tire: {
       totalUnits: tireUnits.length,
       ok: tireUnits.filter((u) => u.status === "ok").length,
       warn: tireUnits.filter((u) => u.status === "warn").length,
-      critical: tireUnits.filter((u) => u.status === "critical").length,
+      critical: criticalCount,
       avgPredictedLifeKm,
     },
     payload: {

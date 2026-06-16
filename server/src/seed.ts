@@ -4,7 +4,7 @@
 //
 // Jalankan: npm run db:seed -w @muatcerdas/server  (atau via db:setup).
 
-import { defaultCostParams, defaultSpeedParams, defaultTkphCatalog, classifyPayload } from "@muatcerdas/shared";
+import { defaultCostParams, defaultSpeedParams, defaultTkphCatalog, defaultOpsParams, classifyPayload } from "@muatcerdas/shared";
 import { prisma } from "./db";
 import { Rng, daysBefore, clamp } from "./lib/random";
 
@@ -117,6 +117,7 @@ async function resetTables(): Promise<void> {
   await prisma.speedParams.deleteMany();
   await prisma.tkphCatalog.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.opsParams.deleteMany();
 }
 
 async function main(): Promise<void> {
@@ -228,6 +229,8 @@ async function main(): Promise<void> {
       tireModel: HD785_TIRE_MODEL,
       tirePriceIdr: null,
       kmPerYear: null,
+      // Modul B/Dashboard: HD-01..08 angkut batubara, HD-09..12 overburden.
+      material: i < 8 ? "coal" : "overburden",
     });
   }
   await insertChunked(unitRows, (c) => prisma.unit.createMany({ data: c as never }));
@@ -341,6 +344,9 @@ async function main(): Promise<void> {
 
   // — CostParams (settings id=1) dari ASUMSI default (§12) —
   await prisma.costParams.create({ data: { id: 1, ...defaultCostParams } });
+
+  // — OpsParams (settings id=1) — metrik kerugian/risiko Dashboard (ASUMSI baru) —
+  await prisma.opsParams.create({ data: { id: 1, ...defaultOpsParams } });
 
   // — Modul C (M9): SpeedParams (id=1) + katalog TKPH per model ban (WAJIB DICARI) —
   await prisma.speedParams.create({ data: { id: 1, ...defaultSpeedParams } });

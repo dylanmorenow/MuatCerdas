@@ -25,13 +25,12 @@ export function TireList() {
     <>
       <PageHeader
         title="Tire — Daftar & Prediksi"
-        subtitle="Sisa umur ban truk hauling (Scania / Volvo) di rute laterit CPP KM33 → Jetty, beserta tingkat keyakinan."
         actions={
           data ? (
             <ExportButton
               filename="tire-prediksi.csv"
-              headers={["unit", "model", "prediksiUmurKm", "sisaUmurKm", "intervalBawahKm", "intervalAtasKm", "keyakinan", "status"]}
-              rows={data.map((u) => [u.id, u.model, u.predictedLifeKm, u.remainingLifeKm, u.remainingLifeLowKm, u.remainingLifeHighKm, u.confidence, u.status])}
+              headers={["unit", "model", "prediksiUmurKm", "sisaUmurKm", "keyakinan", "status"]}
+              rows={data.map((u) => [u.id, u.model, u.predictedLifeKm, u.remainingLifeKm, u.confidence, u.status])}
             />
           ) : undefined
         }
@@ -59,10 +58,9 @@ export function TireList() {
                     Sisa umur
                     <InfoTip text="Prediksi umur ban (model regresi §12.1) dikurangi km berjalan set ban saat ini." />
                   </th>
-                  <th className="px-4 py-3 font-medium">Interval 95%</th>
                   <th className="px-4 py-3 font-medium">
-                    Keyakinan
-                    <InfoTip text="Berdasarkan R² model. 'Estimasi awal' = fallback heuristik saat data minim." />
+                    Keyakinan model
+                    <InfoTip text="Seberapa cocok model regresi dengan data historis unit (R²): makin tinggi makin dapat dipercaya. Badge 'estimasi awal' = data minim, dipakai heuristik umur terbaik merek." />
                   </th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
@@ -77,9 +75,6 @@ export function TireList() {
                     <td className="px-4 py-3 font-medium text-kpp-blue">{u.id}</td>
                     <td className="px-4 py-3 text-slate-600">{u.model}</td>
                     <td className="px-4 py-3 font-medium text-slate-800">{formatRemainingKm(u.remainingLifeKm)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
-                      {formatNumber(u.remainingLifeLowKm)} – {formatNumber(u.remainingLifeHighKm)} km
-                    </td>
                     <td className="px-4 py-3 text-slate-600">
                       {formatPersen(u.confidence)}
                       {u.usedFallback && (

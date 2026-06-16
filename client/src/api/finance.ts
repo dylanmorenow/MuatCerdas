@@ -32,6 +32,11 @@ export interface DashboardData {
   tire: { totalUnits: number; ok: number; warn: number; critical: number; avgPredictedLifeKm: number };
   payload: { count: number; underPct: number; okPct: number; overPct: number; meanKg: number };
   calibration: { total: number; needs: number };
+  ops: {
+    tireReplacementCostIdr: number;
+    productionLossIdr: number;
+    coalQuota: { targetT: number; loadedT: number; pct: number };
+  };
 }
 
 export function useFinance() {
