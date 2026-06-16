@@ -7,6 +7,7 @@ import { apiSend } from "../api/client";
 
 export interface QueuedReport {
   localId: string;
+  path: string;
   body: Record<string, unknown>;
   queuedAt: string;
 }
@@ -43,13 +44,13 @@ function writeQueue(q: QueuedReport[]): void {
 }
 
 /**
- * Enqueue laporan massa. Online → kirim langsung; bila gagal/offline → simpan utk dikirim nanti.
+ * Enqueue laporan ke `path`. Online → kirim langsung; bila gagal/offline → simpan utk dikirim nanti.
  * Mengembalikan apakah sudah terkirim atau ditahan di antrean.
  */
-export async function enqueueMass(body: Record<string, unknown>): Promise<{ sent: boolean; error?: string }> {
+export async function enqueue(path: string, body: Record<string, unknown>): Promise<{ sent: boolean; error?: string }> {
   if (!isOffline()) {
     try {
-      await apiSend("/api/mass", "POST", body);
+      await apiSend(path, "POST", body);
       return { sent: true };
     } catch (err) {
       // Saat online tapi server menolak (mis. validasi) → JANGAN buffer, sampaikan error.
@@ -57,7 +58,7 @@ export async function enqueueMass(body: Record<string, unknown>): Promise<{ sent
     }
   }
   const q = getQueue();
-  q.push({ localId: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, body, queuedAt: new Date().toISOString() });
+  q.push({ localId: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, path, body, queuedAt: new Date().toISOString() });
   writeQueue(q);
   return { sent: false };
 }
@@ -70,7 +71,7 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
   const remaining: QueuedReport[] = [];
   for (const item of q) {
     try {
-      await apiSend("/api/mass", "POST", item.body);
+      await apiSend(item.path, "POST", item.body);
       flushed++;
     } catch {
       remaining.push(item);

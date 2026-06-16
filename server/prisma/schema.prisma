@@ -29,6 +29,7 @@ model Unit {
   payloadEvents PayloadEvent[]
   calibrations  CalibrationRecord[]
   massInputs    MassInput[]
+  driverEvents  DriverEvent[]
 }
 
 model Operator {
@@ -50,6 +51,7 @@ model RoadSegment {
   avgSpeedEmptyKmh  Float
 
   exposures TripSegmentExposure[]
+  hazards   RoadHazard[]
 }
 
 // Registry ban truk hauling (Modul A).
@@ -207,6 +209,41 @@ model MassInput {
   operatorName     String // operator pelapor (driver)
   timestamp        DateTime @default(now())
   source           String   @default("operator") // "operator" | "import" | "feed" (operatorFeed adaptor)
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+  @@index([timestamp])
+}
+
+// Revisi F3 — bahaya jalan dari "device LiDAR" (SIMULASI; truk pemeta = hauling lead/last).
+// conditionScore segmen diturunkan dari kumpulan bahaya ini (shared/hazard.ts) → menyetir Modul A/C.
+// Batas integrasi: adaptor roadMapSource dapat menyambung feed LiDAR nyata tanpa ubah domain.
+model RoadHazard {
+  id         String   @id @default(cuid())
+  type       String // pothole|rutting|washboard|sharp_rock|spillage|standing_water|mud|edge_break
+  segmentId  String
+  positionKm Float // posisi sepanjang rute CPP KM33 → Jetty (0..~35)
+  severity   Float // 0..1
+  detectedAt DateTime @default(now())
+  source     String   @default("lidar_sim")
+
+  segment RoadSegment @relation(fields: [segmentId], references: [id])
+
+  @@index([segmentId])
+}
+
+// Revisi F3 — kejadian per unit dari surface driver (SIMULASI): overspeed (vs Vmax_safe) &
+// melewati zona bahaya. Dikonsumsi rekomendasi Modul A. Masuk via antrean offline operator.
+model DriverEvent {
+  id        String   @id @default(cuid())
+  unitId    String
+  type      String // "overspeed" | "hazard"
+  detail    String
+  atKm      Float?
+  hazardType String?
+  timestamp DateTime @default(now())
+  source    String   @default("sim")
 
   unit Unit @relation(fields: [unitId], references: [id])
 

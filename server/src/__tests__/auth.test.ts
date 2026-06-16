@@ -17,4 +17,8 @@ describe("isDriverAllowed (penegakan peran driver, FR-0004-2)", () => {
     expect(isDriverAllowed("POST", "/api/mass")).toBe(true);
     expect(isDriverAllowed("GET", "/api/mass/monitoring")).toBe(false); // monitoring = admin
   });
+  it("driver boleh POST kejadian overspeed/hazard unitnya (F3)", () => {
+    expect(isDriverAllowed("POST", "/api/driver/event")).toBe(true);
+    expect(isDriverAllowed("GET", "/api/driver/events")).toBe(false); // daftar = admin
+  });
 });

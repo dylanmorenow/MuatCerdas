@@ -1,5 +1,7 @@
-// Hook Modul D — peta jalan (prototipe). GET (driver+admin) · PUT conditionScore (admin).
+// Hook Modul D + F3 — peta jalan LiDAR (prototipe). GET (driver+admin) ·
+// POST /recompute (admin): turunkan conditionScore dari bahaya LiDAR (bukan input manual).
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { HazardType } from "@muatcerdas/shared";
 import { apiGet, apiSend } from "./client";
 
 export interface RoadMapSegment {
@@ -9,9 +11,19 @@ export interface RoadMapSegment {
   lengthKm: number;
   conditionScore: number;
   condition: "baik" | "berlubang" | "berlumpur" | "batu tajam";
+  hazardCount: number;
+}
+export interface RoadMapHazard {
+  id: string;
+  type: HazardType;
+  segmentId: string;
+  positionKm: number;
+  severity: number;
 }
 export interface RoadMapData {
   segments: RoadMapSegment[];
+  hazards: RoadMapHazard[];
+  routeLengthKm: number;
   mappers: { leadUnitId: string | null; lastUnitId: string | null };
   lastUpdated: string;
   source: string;
@@ -21,17 +33,17 @@ export function useRoadMap() {
   return useQuery({ queryKey: ["roadmap"], queryFn: () => apiGet<RoadMapData>("/api/roadmap") });
 }
 
-export function useUpdateSegment() {
+/** Recompute conditionScore dari bahaya LiDAR (admin). conditionScore menyetir Modul A → invalidasi terkait. */
+export function useRecomputeRoadmap() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, conditionScore }: { id: string; conditionScore: number }) =>
-      apiSend<RoadMapSegment>(`/api/roadmap/segment/${id}`, "PUT", { conditionScore }),
+    mutationFn: () => apiSend<RoadMapData>("/api/roadmap/recompute", "POST"),
     onSuccess: () => {
-      // conditionScore dipakai Modul A → segarkan data terkait (FR-0004-6).
       void qc.invalidateQueries({ queryKey: ["roadmap"] });
       void qc.invalidateQueries({ queryKey: ["tire-units"] });
       void qc.invalidateQueries({ queryKey: ["tire-unit"] });
       void qc.invalidateQueries({ queryKey: ["dashboard"] });
+      void qc.invalidateQueries({ queryKey: ["speed"] });
     },
   });
 }

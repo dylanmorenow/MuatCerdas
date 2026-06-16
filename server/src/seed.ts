@@ -4,7 +4,19 @@
 //
 // Jalankan: npm run db:seed -w @muatcerdas/server  (atau via db:setup).
 
-import { defaultCostParams, defaultSpeedParams, defaultTkphCatalog, defaultOpsParams, classifyPayload } from "@muatcerdas/shared";
+import {
+  defaultCostParams,
+  defaultSpeedParams,
+  defaultTkphCatalog,
+  defaultOpsParams,
+  classifyPayload,
+  conditionScoreFromHazards,
+  hazardSeverityWeight,
+  hazardLabel,
+  HAZARD_TYPES,
+  type HazardType,
+  type HazardLike,
+} from "@muatcerdas/shared";
 import { prisma } from "./db";
 import { Rng, daysBefore, clamp } from "./lib/random";
 
@@ -111,6 +123,8 @@ async function resetTables(): Promise<void> {
   await prisma.payloadEvent.deleteMany();
   await prisma.calibrationRecord.deleteMany();
   await prisma.massInput.deleteMany();
+  await prisma.driverEvent.deleteMany();
+  await prisma.roadHazard.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.operator.deleteMany();
   await prisma.roadSegment.deleteMany();
@@ -149,6 +163,48 @@ async function main(): Promise<void> {
       avgSpeedEmptyKmh: s.empty,
     })),
   });
+
+  // — RoadHazard (F3): bahaya "device LiDAR" (SIMULASI) sepanjang rute. Jumlah/severity dikalibrasi
+  //   agar conditionScore TURUNAN (shared/hazard.ts) ≈ kondisi tiap segmen (laterit buruk → banyak
+  //   pothole/lumpur; batu → batu tajam; aspal → minim). Lalu conditionScore DB diturunkan dari sini
+  //   → menyetir Modul A/C (FR-0004-6). Bukan feed LiDAR live.
+  const HAZARD_BY_SURFACE: Record<string, HazardType[]> = {
+    laterite: ["pothole", "rutting", "mud", "standing_water", "edge_break"],
+    rock: ["sharp_rock", "pothole", "washboard"],
+    sealed: ["washboard", "spillage"],
+  };
+  const hazardRows: Row[] = [];
+  let segStartKm = 0;
+  for (const s of SEGMENTS) {
+    const pool = HAZARD_BY_SURFACE[s.surface] ?? HAZARD_TYPES;
+    const targetSum = ((0.98 - s.conditionScore) / 0.85) * s.lengthKm; // utk dekati cond asli
+    let sum = 0;
+    let n = 0;
+    const segHazards: HazardLike[] = [];
+    while (sum < targetSum && n < 14) {
+      const type = rng.pick(pool);
+      const severity = Number(clamp(rng.gaussian(0.7, 0.15), 0.3, 1).toFixed(2));
+      segHazards.push({ type, segmentId: s.id, severity });
+      hazardRows.push({
+        id: `HZ-${s.id}-${String(n + 1).padStart(2, "0")}`,
+        type,
+        segmentId: s.id,
+        positionKm: Number((segStartKm + rng.range(0.3, s.lengthKm - 0.3)).toFixed(1)),
+        severity,
+        detectedAt: daysBefore(SEED_TODAY, rng.int(0, 6)),
+        source: "lidar_sim",
+      });
+      sum += hazardSeverityWeight(type) * severity;
+      n++;
+    }
+    // conditionScore DB = turunan dari bahaya (bukan konstanta/slider manual).
+    await prisma.roadSegment.update({
+      where: { id: s.id },
+      data: { conditionScore: conditionScoreFromHazards(segHazards, s.lengthKm) },
+    });
+    segStartKm += s.lengthKm;
+  }
+  await insertChunked(hazardRows, (c) => prisma.roadHazard.createMany({ data: c as never }));
 
   // — Unit: 30 haul_truck (Modul A) + 12 HD785 (Modul B) —
   const HAUL_COUNT = 30;
@@ -403,6 +459,40 @@ async function main(): Promise<void> {
   }
   await insertChunked(massRows, (c) => prisma.massInput.createMany({ data: c as never }));
 
+  // — DriverEvent (F3): overspeed & lewat zona bahaya per unit (SIMULASI) → rekomendasi Modul A.
+  //   Unit dgn jalan lebih buruk cenderung lebih sering. Deterministik (SEED_TODAY).
+  const eventRows: Row[] = [];
+  for (const h of haulTrucks) {
+    const overspeed = rng.int(0, h.roadBadness > ROUTE_BADNESS ? 4 : 2);
+    for (let k = 0; k < overspeed; k++) {
+      eventRows.push({
+        id: `DE-${h.id}-OS-${k + 1}`,
+        unitId: h.id,
+        type: "overspeed",
+        detail: "Melebihi Vmax aman saat bermuatan (batas TKPH)",
+        atKm: Number(rng.range(2, 33).toFixed(1)),
+        hazardType: null,
+        timestamp: new Date(daysBefore(SEED_TODAY, rng.int(0, 7)).getTime() + rng.int(0, 86_399) * 1000),
+        source: "sim",
+      });
+    }
+    const hazards = rng.int(0, 3);
+    for (let k = 0; k < hazards; k++) {
+      const ht = rng.pick(HAZARD_TYPES);
+      eventRows.push({
+        id: `DE-${h.id}-HZ-${k + 1}`,
+        unitId: h.id,
+        type: "hazard",
+        detail: `Melewati ${hazardLabel(ht)}`,
+        atKm: Number(rng.range(2, 33).toFixed(1)),
+        hazardType: ht,
+        timestamp: new Date(daysBefore(SEED_TODAY, rng.int(0, 7)).getTime() + rng.int(0, 86_399) * 1000),
+        source: "sim",
+      });
+    }
+  }
+  await insertChunked(eventRows, (c) => prisma.driverEvent.createMany({ data: c as never }));
+
   // — CalibrationRecord (Modul B): sebagian perlu kalibrasi (offset/usia) —
   const calibrationRows: Row[] = dumpers.map((d) => ({
     id: `CAL-${d.id}`,
@@ -448,6 +538,7 @@ async function main(): Promise<void> {
     prisma.calibrationRecord.count(),
     prisma.massInput.count(),
   ]);
+  const [hazards, driverEvents] = await Promise.all([prisma.roadHazard.count(), prisma.driverEvent.count()]);
   const [under, ok, over] = await Promise.all([
     prisma.payloadEvent.count({ where: { status: "under" } }),
     prisma.payloadEvent.count({ where: { status: "ok" } }),
@@ -467,6 +558,8 @@ async function main(): Promise<void> {
     PayloadEvent: payloads,
     CalibrationRecord: calibrations,
     "MassInput (F2 operator)": massInputs,
+    "RoadHazard (F3 LiDAR sim)": hazards,
+    "DriverEvent (F3 sim)": driverEvents,
   });
   console.log(`Payload status — under: ${under} · ok: ${ok} · over: ${over}`);
   if (haul !== 30 || dump !== 12) {

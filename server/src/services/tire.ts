@@ -13,6 +13,7 @@ import {
   type CostParams,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
+import { getDriverEventSummaryByUnit } from "./driverEvents";
 
 const MS_PER_DAY = 86_400_000;
 
@@ -450,7 +451,7 @@ const FACTOR_ACTION: Record<string, { action: string; reason: string }> = {
 
 /** Rekomendasi tindakan ban + estimasi penghematan (FR-0002-6). */
 export async function getTireRecommendations(): Promise<TireRecommendation[]> {
-  const ctx = await loadContext();
+  const [ctx, eventSummary] = await Promise.all([loadContext(), getDriverEventSummaryByUnit()]);
   const recs: TireRecommendation[] = [];
 
   for (const u of ctx.units) {
@@ -501,6 +502,33 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
           priority: Math.round(c.contribution / 100),
         });
       }
+    }
+
+    // F3 — rekomendasi dari data driver (overspeed & zona bahaya dilewati). "Loss bila diabaikan"
+    // = fraksi capturedPerUnit menurut intensitas kejadian (keausan ban dari ngebut/jalan rusak).
+    const ev = eventSummary[u.id];
+    if (ev && ev.overspeedCount > 0) {
+      recs.push({
+        unitId: u.id,
+        model: u.model,
+        action: "Coaching kecepatan — kurangi overspeed (jaga ≤ Vmax aman)",
+        reason: `${ev.overspeedCount}× overspeed terdeteksi (Modul C) — memanaskan ban (TKPH) → umur turun`,
+        factor: "Overspeed (driver)",
+        estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.overspeedCount * 0.05)),
+        priority: 60 + ev.overspeedCount,
+      });
+    }
+    if (ev && ev.hazardCount > 0) {
+      const types = ev.hazardTypes.slice(0, 3).join(", ");
+      recs.push({
+        unitId: u.id,
+        model: u.model,
+        action: "Hindari/perbaiki segmen rawan bahaya yang dilewati",
+        reason: `${ev.hazardCount}× melewati zona bahaya${types ? ` (${types})` : ""} — percepat keausan/cut ban`,
+        factor: "Zona bahaya (driver)",
+        estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.hazardCount * 0.04)),
+        priority: 55 + ev.hazardCount,
+      });
     }
   }
 

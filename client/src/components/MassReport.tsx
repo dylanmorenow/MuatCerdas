@@ -74,7 +74,7 @@ export function MassReportForm({
     const body: Record<string, unknown> = isHd
       ? { unitId, material, totalT: Number(totalT), excavatorOperator: exc.trim() || null, operatorName, source: "operator" }
       : { unitId, material: "coal", bucket1T: Number(b1), bucket2T: Number(b2), operatorName, source: "operator" };
-    const r = await enqueue(body);
+    const r = await enqueue("/api/mass", body);
     setBusy(false);
     if (r.sent) {
       setMsg({ tone: "ok", text: "Terkirim ke surveyor ✓" });

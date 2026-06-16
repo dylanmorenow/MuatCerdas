@@ -1,46 +1,47 @@
-import { useEffect, useState } from "react";
-import { formatPersen, conditionLabel, conditionColor } from "@muatcerdas/shared";
-import { useRoadMap, useUpdateSegment, type RoadMapSegment } from "../api/roadmap";
+// Modul D + F3 — Peta Jalan LiDAR (prototipe). conditionScore DITURUNKAN dari bahaya LiDAR
+// (bukan slider manual) → menyetir Modul A/C. Admin dapat "recompute dari LiDAR".
+import { formatPersen, conditionColor } from "@muatcerdas/shared";
+import { useRoadMap, useRecomputeRoadmap } from "../api/roadmap";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
-import { RoadMapStrip } from "../components/RoadMapStrip";
+import { HazardMap } from "../components/HazardMap";
 
 export function RoadMap() {
   const { data, isLoading, error, refetch } = useRoadMap();
-  const update = useUpdateSegment();
-  const [local, setLocal] = useState<RoadMapSegment[] | null>(null);
+  const recompute = useRecomputeRoadmap();
 
-  useEffect(() => {
-    if (data) setLocal(data.segments);
-  }, [data]);
-
-  if (isLoading || !local || !data) {
+  if (isLoading || !data) {
     return (
       <>
-        <PageHeader title="Peta Jalan (prototipe)" />
+        <PageHeader title="Peta Jalan LiDAR (prototipe)" />
         {error ? <ErrorState message={(error as Error).message} onRetry={() => void refetch()} /> : <Loading />}
       </>
     );
   }
 
-  const total = local.reduce((s, x) => s + x.lengthKm, 0) || 1;
-  // Keburukan jalan rute terbobot = nilai yang dikonsumsi Modul A (eksposur jalan ban).
-  const routeBadness = local.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / total;
-
-  const setScore = (id: string, v: number) =>
-    setLocal((segs) => (segs ? segs.map((s) => (s.id === id ? { ...s, conditionScore: v, condition: conditionLabel(v) } : s)) : segs));
+  const total = data.routeLengthKm || data.segments.reduce((s, x) => s + x.lengthKm, 0) || 1;
+  const routeBadness = data.segments.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / total;
 
   return (
     <>
       <PageHeader
-        title="Peta Jalan (prototipe)"
-        subtitle="Kondisi jalan KM33 → Jetty per segmen — mewakili keluaran LIDAR truk pemeta (lead/last)."
+        title="Peta Jalan LiDAR (prototipe)"
+        subtitle="Bahaya jalan KM33 → Jetty dari device LiDAR (truk pemeta lead/last). Kondisi segmen DITURUNKAN dari bahaya → dipakai Modul A & C. Data simulasi — bukan LiDAR live."
+        actions={
+          <button
+            onClick={() => recompute.mutate()}
+            disabled={recompute.isPending}
+            className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90 disabled:opacity-50"
+          >
+            {recompute.isPending ? "Memproses…" : "Recompute dari LiDAR"}
+          </button>
+        }
       />
 
       <Card>
-        <RoadMapStrip segments={local} mappers={data.mappers} />
+        <HazardMap data={data} height={170} />
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <Badge tone="slate">prototipe · data simulasi</Badge>
-          <span>bukan LIDAR live · terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>
+          <Badge tone="slate">prototipe · data simulasi LiDAR</Badge>
+          <span>bukan LiDAR live · {data.hazards.length} bahaya terdeteksi · terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>
         </div>
       </Card>
 
@@ -51,43 +52,45 @@ export function RoadMap() {
             value={formatPersen(routeBadness)}
             hint={
               <>
-                nilai ini dipakai prediksi <span className="font-medium">Modul A</span> (eksposur jalan ban)
-                <InfoTip text="Σ panjang×(1−conditionScore)/Σpanjang. Geser kondisi segmen → angka ini & eksposur jalan Modul A berubah (FR-0004-6)." />
+                diturunkan dari bahaya LiDAR; dipakai prediksi <span className="font-medium">Modul A</span>
+                <InfoTip text="Σ panjang×(1−conditionScore)/Σpanjang. conditionScore kini berasal dari bahaya LiDAR (bukan slider). 'Recompute dari LiDAR' → eksposur jalan Modul A berubah (FR-0004-6/AC#5)." />
               </>
             }
           />
-          {update.isPending && <p className="mt-2 text-xs text-slate-400">menyimpan…</p>}
+          {recompute.isSuccess && <p className="mt-2 text-xs text-emerald-600">conditionScore diperbarui dari bahaya ✓</p>}
         </Card>
 
-        <Card className="lg:col-span-2">
-          <h2 className="mb-1 font-semibold text-slate-800">Atur kondisi segmen (admin)</h2>
-          <p className="mb-3 text-xs text-slate-400">Geser untuk memperbaiki/memburukkan; perubahan dipakai Modul A.</p>
-          <div className="space-y-3">
-            {local.map((s) => (
-              <div key={s.id} className="flex items-center gap-3">
-                <div className="w-40 shrink-0">
-                  <div className="text-sm font-medium text-slate-700">{s.name}</div>
-                  <div className="text-xs text-slate-400">{s.lengthKm} km · {s.surface}</div>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={s.conditionScore}
-                  onChange={(e) => setScore(s.id, Number(e.target.value))}
-                  onPointerUp={(e) => update.mutate({ id: s.id, conditionScore: Number((e.target as HTMLInputElement).value) })}
-                  className="flex-1 accent-kpp-green"
-                />
-                <span
-                  className="w-24 shrink-0 rounded px-2 py-0.5 text-center text-xs font-medium text-white"
-                  style={{ backgroundColor: conditionColor(s.conditionScore) }}
-                >
-                  {s.condition}
-                </span>
-              </div>
-            ))}
+        <Card className="lg:col-span-2 overflow-hidden p-0">
+          <div className="border-b border-slate-200 px-5 py-3">
+            <h2 className="font-semibold text-slate-800">Kondisi segmen (turunan bahaya)</h2>
+            <p className="text-xs text-slate-400">Read-only — bersumber dari peta LiDAR, bukan input manual.</p>
           </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-2.5 font-medium">Segmen</th>
+                <th className="px-4 py-2.5 font-medium">Panjang</th>
+                <th className="px-4 py-2.5 font-medium">Bahaya</th>
+                <th className="px-4 py-2.5 font-medium">conditionScore</th>
+                <th className="px-4 py-2.5 font-medium">Kondisi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.segments.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-2.5 font-medium text-slate-700">{s.name}<div className="text-xs font-normal text-slate-400">{s.surface}</div></td>
+                  <td className="px-4 py-2.5 text-slate-600">{s.lengthKm} km</td>
+                  <td className="px-4 py-2.5 text-slate-600">{s.hazardCount}</td>
+                  <td className="px-4 py-2.5 text-slate-600">{s.conditionScore.toFixed(2)}</td>
+                  <td className="px-4 py-2.5">
+                    <span className="rounded px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: conditionColor(s.conditionScore) }}>
+                      {s.condition}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       </div>
     </>

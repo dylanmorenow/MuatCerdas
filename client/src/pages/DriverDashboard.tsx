@@ -1,10 +1,13 @@
 // Surface DRIVER (FR-0004-4) — besar, sederhana, terbaca sekilas saat operasi.
 import { formatNumber } from "@muatcerdas/shared";
 import { useDriverMe } from "../api/driver";
+import { useRoadMap } from "../api/roadmap";
 import { clearToken } from "../api/auth";
 import { Loading, ErrorState, cx } from "../components/ui";
 import { RoadMapStrip } from "../components/RoadMapStrip";
+import { HazardMap } from "../components/HazardMap";
 import { MassReportForm } from "../components/MassReport";
+import { DriverTripSim } from "../components/DriverTripSim";
 
 const PAYLOAD_TONE: Record<string, { bg: string; label: string }> = {
   under: { bg: "bg-amber-500", label: "KURANG" },
@@ -19,6 +22,7 @@ const TIRE_TONE: Record<string, { bg: string; label: string }> = {
 
 export function DriverDashboard() {
   const { data, isLoading, error, refetch } = useDriverMe();
+  const { data: roadMap } = useRoadMap();
   const logout = () => {
     clearToken();
     window.location.reload();
@@ -97,13 +101,20 @@ export function DriverDashboard() {
               operatorName={data.identity.name ?? data.identity.username ?? data.unit.id}
             />
 
-            {/* Peta jalan (read-only) */}
+            {/* Simulasi perjalanan → overspeed/hazard event */}
+            <DriverTripSim unitId={data.unit.id} vmaxKmh={data.speed?.vmaxSafeTravelKmh ?? null} />
+
+            {/* Peta bahaya jalan LiDAR */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-semibold text-slate-800">Kondisi jalan KM33 → Jetty</h2>
+                <h2 className="font-semibold text-slate-800">Bahaya jalan KM33 → Jetty (LiDAR)</h2>
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe · data simulasi</span>
               </div>
-              <RoadMapStrip segments={data.roadMap.segments} mappers={data.roadMap.mappers} />
+              {roadMap ? (
+                <HazardMap data={roadMap} height={150} />
+              ) : (
+                <RoadMapStrip segments={data.roadMap.segments} mappers={data.roadMap.mappers} />
+              )}
             </div>
           </div>
         )}

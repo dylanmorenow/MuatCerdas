@@ -2,11 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatNumber, formatRupiah, formatPersen, formatTon } from "@muatcerdas/shared";
 import { useDashboard } from "../api/finance";
+import { useRoadMap } from "../api/roadmap";
+import { HazardMap } from "../components/HazardMap";
 import { PageHeader, Card, Loading, ErrorState, InfoTip, cx } from "../components/ui";
 import { downloadReportPdf, downloadCsv } from "../lib/export";
 
 export function Dashboard() {
   const { data, isLoading, error, refetch } = useDashboard();
+  const { data: roadMap } = useRoadMap();
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const exportCsv = () => {
@@ -133,6 +136,20 @@ export function Dashboard() {
               </p>
             </Card>
           </div>
+
+          {/* Peta bahaya jalan LiDAR (prototipe) */}
+          {roadMap && (
+            <Card className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-semibold text-slate-800">
+                  Peta bahaya jalan — LiDAR (prototipe)
+                  <InfoTip text="Bahaya rute KM33 → Jetty dari device LiDAR (truk pemeta lead/last, shift 1). Data simulasi mewakili keluaran LiDAR; menyetir kondisi jalan Modul A/C. Bukan LiDAR live." />
+                </h2>
+                <Link to="/roadmap" className="text-sm text-kpp-blue hover:underline">Buka peta →</Link>
+              </div>
+              <HazardMap data={roadMap} height={150} />
+            </Card>
+          )}
 
           <p className="mt-5 text-xs text-slate-400">
             Angka di atas memakai asumsi tersimpan.{" "}

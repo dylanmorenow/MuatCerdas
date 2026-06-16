@@ -1,6 +1,6 @@
 // Hook reaktif untuk antrean offline (revisi F2). Re-render saat antrean/status berubah.
 import { useEffect, useReducer } from "react";
-import { isOffline, getQueue, subscribe, setOffline, flushQueue, enqueueMass } from "./offlineQueue";
+import { isOffline, getQueue, subscribe, setOffline, flushQueue, enqueue } from "./offlineQueue";
 
 export function useOfflineQueue() {
   const [, force] = useReducer((x: number) => x + 1, 0);
@@ -10,6 +10,6 @@ export function useOfflineQueue() {
     queued: getQueue().length,
     setOffline,
     flush: flushQueue,
-    enqueue: enqueueMass,
+    enqueue,
   };
 }
