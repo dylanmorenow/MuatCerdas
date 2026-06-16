@@ -13,4 +13,8 @@ describe("isDriverAllowed (penegakan peran driver, FR-0004-2)", () => {
     expect(isDriverAllowed("PUT", "/api/roadmap/segment/SEG-1")).toBe(false);
     expect(isDriverAllowed("POST", "/api/finance/params")).toBe(false);
   });
+  it("driver boleh POST lapor massa unitnya (F2); kepemilikan unit dicek di route", () => {
+    expect(isDriverAllowed("POST", "/api/mass")).toBe(true);
+    expect(isDriverAllowed("GET", "/api/mass/monitoring")).toBe(false); // monitoring = admin
+  });
 });

@@ -28,6 +28,7 @@ model Unit {
   tripLogs      TripLog[]
   payloadEvents PayloadEvent[]
   calibrations  CalibrationRecord[]
+  massInputs    MassInput[]
 }
 
 model Operator {
@@ -187,4 +188,28 @@ model OpsParams {
   downtimeDaysPerCriticalUnit    Float
   productionValuePerUnitPerDayIdr Float
   dailyCoalTargetT               Float
+}
+
+// Modul revisi F2 — laporan massa muatan oleh operator lapangan (store-and-forward).
+// HD785: operator driver mencatat massa + material + nama operator excavator pemuat.
+// Truk hauling: operator mencatat massa per bucket (umumnya 2 bucket), material = coal.
+// SUMBER: input operator (disimulasikan; antrean offline di klien). Adaptor operatorFeed
+// menyiapkan batas integrasi feed nyata — bukan perangkat live di kabin.
+model MassInput {
+  id               String   @id @default(cuid())
+  unitId           String
+  category         String // "pit_dumper" | "haul_truck" (disimpan utk query cepat; ditegakkan vs Unit)
+  material         String? // "coal" | "overburden"
+  totalT           Float
+  bucket1T         Float? // truk hauling (bucket 1)
+  bucket2T         Float? // truk hauling (bucket 2)
+  excavatorOperator String? // HD785: nama operator excavator pemuat
+  operatorName     String // operator pelapor (driver)
+  timestamp        DateTime @default(now())
+  source           String   @default("operator") // "operator" | "import" | "feed" (operatorFeed adaptor)
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+  @@index([timestamp])
 }

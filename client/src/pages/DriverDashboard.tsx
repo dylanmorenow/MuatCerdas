@@ -4,6 +4,7 @@ import { useDriverMe } from "../api/driver";
 import { clearToken } from "../api/auth";
 import { Loading, ErrorState, cx } from "../components/ui";
 import { RoadMapStrip } from "../components/RoadMapStrip";
+import { MassReportForm } from "../components/MassReport";
 
 const PAYLOAD_TONE: Record<string, { bg: string; label: string }> = {
   under: { bg: "bg-amber-500", label: "KURANG" },
@@ -88,6 +89,13 @@ export function DriverDashboard() {
                 />
               )}
             </div>
+
+            {/* Lapor massa muatan → surveyor (Mass Monitoring) */}
+            <MassReportForm
+              unitId={data.unit.id}
+              category={data.unit.category}
+              operatorName={data.identity.name ?? data.identity.username ?? data.unit.id}
+            />
 
             {/* Peta jalan (read-only) */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">

@@ -8,7 +8,7 @@ import { TireList } from "./pages/TireList";
 import { TireUnitDetail } from "./pages/TireUnitDetail";
 import { TireRecommendations } from "./pages/TireRecommendations";
 import { PayloadAnalytics } from "./pages/PayloadAnalytics";
-import { LoadingGuidance } from "./pages/LoadingGuidance";
+import { MassMonitoring } from "./pages/MassMonitoring";
 import { CalibrationHealth } from "./pages/CalibrationHealth";
 import { Dashboard } from "./pages/Dashboard";
 import { Finance } from "./pages/Finance";
@@ -48,7 +48,7 @@ function AdminApp() {
 
         {/* Modul B — Payload */}
         <Route path="payload" element={<PayloadAnalytics />} />
-        <Route path="payload/mass" element={<LoadingGuidance />} />
+        <Route path="payload/mass" element={<MassMonitoring />} />
         <Route path="payload/guidance" element={<Navigate to="/payload/mass" replace />} />
         <Route path="calibration" element={<CalibrationHealth />} />
 

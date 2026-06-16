@@ -17,6 +17,7 @@ import {
 import { prisma } from "../db";
 import { getTireUnits } from "./tire";
 import { getPayloadAnalytics, getCalibrationHealth } from "./payload";
+import { coalLoadedTodayT } from "./mass";
 
 /** Estimasi trip/hari per HD785 (ASUMSI F1; F2 memakai MassInput nyata). */
 const ASSUMED_TRIPS_PER_DAY = 8;
@@ -188,10 +189,12 @@ export async function getDashboard(): Promise<DashboardData> {
     : 0;
   const criticalCount = tireUnits.filter((u) => u.status === "critical").length;
 
-  // Kuota coal harian (F1: estimasi dari rata-rata payload coal HD785 × trip/hari; F2: MassInput nyata).
+  // Kuota coal harian: F2 pakai laporan massa operator HARI INI (nyata) bila ada;
+  // jika belum ada laporan, fallback estimasi (rata-rata payload coal HD785 × trip/hari).
+  const coalReportedT = await coalLoadedTodayT();
   const coalIds = new Set(coalUnits.map((u) => u.id));
   const coalMeanTotalT = payload.byUnit.filter((g) => coalIds.has(g.key)).reduce((s, g) => s + g.stats.mean, 0) / 1000;
-  const coalLoadedT = Math.round(coalMeanTotalT * ASSUMED_TRIPS_PER_DAY);
+  const coalLoadedT = coalReportedT ?? Math.round(coalMeanTotalT * ASSUMED_TRIPS_PER_DAY);
 
   return {
     finance,

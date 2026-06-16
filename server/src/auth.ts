@@ -44,12 +44,16 @@ export async function authenticateUser(username: string, password: string): Prom
 
 /** Path publik (tak butuh token). */
 const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/config", "/api/auth/login"]);
-/** Path yang boleh diakses driver (hanya GET). Selain ini → 403 (FR-0004-2). */
+/** Path GET yang boleh diakses driver. Selain ini → 403 (FR-0004-2). */
 const DRIVER_GET_PATHS = new Set(["/api/auth/me", "/api/driver/me", "/api/roadmap"]);
+/** Path POST yang boleh driver (lapor massa muatan unitnya — F2). Kepemilikan unit dicek di route. */
+const DRIVER_POST_PATHS = new Set(["/api/mass"]);
 
 /** Apakah driver boleh mengakses (murni, di-unit-test). */
 export function isDriverAllowed(method: string, path: string): boolean {
-  return method === "GET" && DRIVER_GET_PATHS.has(path);
+  if (method === "GET") return DRIVER_GET_PATHS.has(path);
+  if (method === "POST") return DRIVER_POST_PATHS.has(path);
+  return false;
 }
 
 export async function registerAuth(app: FastifyInstance, cfg: AuthConfig): Promise<void> {

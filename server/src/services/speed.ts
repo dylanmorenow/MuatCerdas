@@ -20,6 +20,7 @@ import {
   type TkphCatalogEntry,
   type SpeedDecision,
   type ProductionSpeedResult,
+  latestMassPerUnit,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 
@@ -303,8 +304,21 @@ async function loadCatalog(): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.tireModel, r.catalogTkph]));
 }
 
-/** Muatan terkini per unit haul = rata-rata payloadIdx × ratedPayloadKg (fallback rated). */
-async function haulUnitInputs(): Promise<SpeedUnitInput[]> {
+/**
+ * Massa terkini dilaporkan operator (MassInput) per unit, dalam KG. F2: menutup loop —
+ * "dengan muatan X (lapor operator), kecepatan maks Y". Kosong bila belum ada laporan
+ * (pemanggil fallback ke sumber lama). Mengubah SUMBER input saja, bukan rumus TKPH teruji.
+ */
+async function operatorMassKgByUnit(): Promise<Map<string, number>> {
+  const recs = await prisma.massInput.findMany({ orderBy: { timestamp: "desc" }, take: 1000 });
+  const latest = latestMassPerUnit(
+    recs.map((r) => ({ unitId: r.unitId, category: r.category, totalT: r.totalT, timestamp: r.timestamp })),
+  );
+  return new Map(Object.values(latest).map((r) => [r.unitId, r.totalT * 1000]));
+}
+
+/** Muatan terkini per unit haul = lapor operator bila ada; jika tidak, payloadIdx × ratedPayloadKg. */
+async function haulUnitInputs(massByUnit: Map<string, number>): Promise<SpeedUnitInput[]> {
   const [units, tripAvg] = await Promise.all([
     prisma.unit.findMany({ where: { category: "haul_truck" } }),
     prisma.tripLog.groupBy({ by: ["unitId"], _avg: { payloadIdx: true } }),
@@ -315,13 +329,13 @@ async function haulUnitInputs(): Promise<SpeedUnitInput[]> {
     model: u.model,
     tireModel: u.tireModel,
     tareKg: u.tareKg,
-    payloadKg: (idxByUnit.get(u.id) ?? 1) * u.ratedPayloadKg,
+    payloadKg: massByUnit.get(u.id) ?? (idxByUnit.get(u.id) ?? 1) * u.ratedPayloadKg,
     targetKg: u.ratedPayloadKg,
   }));
 }
 
-/** Muatan terkini per HD785 = rata-rata measuredPayloadKg dari PayloadEvent (fallback rated). */
-async function hd785UnitInputs(): Promise<SpeedUnitInput[]> {
+/** Muatan terkini per HD785 = lapor operator bila ada; jika tidak, rata-rata PayloadEvent. */
+async function hd785UnitInputs(massByUnit: Map<string, number>): Promise<SpeedUnitInput[]> {
   const [units, payloadAvg] = await Promise.all([
     prisma.unit.findMany({ where: { category: "pit_dumper" } }),
     prisma.payloadEvent.groupBy({ by: ["unitId"], _avg: { measuredPayloadKg: true } }),
@@ -332,17 +346,18 @@ async function hd785UnitInputs(): Promise<SpeedUnitInput[]> {
     model: u.model,
     tireModel: u.tireModel,
     tareKg: u.tareKg,
-    payloadKg: kgByUnit.get(u.id) || u.ratedPayloadKg,
+    payloadKg: massByUnit.get(u.id) ?? (kgByUnit.get(u.id) || u.ratedPayloadKg),
     targetKg: u.ratedPayloadKg,
   }));
 }
 
 export async function getSpeedOverview(): Promise<SpeedOverview> {
+  const massByUnit = await operatorMassKgByUnit();
   const [params, catalog, haulUnits, hd785Units] = await Promise.all([
     loadSpeedParams(),
     loadCatalog(),
-    haulUnitInputs(),
-    hd785UnitInputs(),
+    haulUnitInputs(massByUnit),
+    hd785UnitInputs(massByUnit),
   ]);
   return computeSpeedModel({ params, catalog, haulUnits, hd785Units });
 }

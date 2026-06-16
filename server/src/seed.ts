@@ -110,6 +110,7 @@ async function resetTables(): Promise<void> {
   await prisma.tireRecord.deleteMany();
   await prisma.payloadEvent.deleteMany();
   await prisma.calibrationRecord.deleteMany();
+  await prisma.massInput.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.operator.deleteMany();
   await prisma.roadSegment.deleteMany();
@@ -333,6 +334,75 @@ async function main(): Promise<void> {
   }
   await insertChunked(payloadRows, (c) => prisma.payloadEvent.createMany({ data: c as never }));
 
+  // — MassInput (revisi F2): laporan massa operator HARI INI → Mass Monitoring + kuota coal.
+  //   Timestamp NOW-relatif (beberapa jam terakhir) agar dihitung "hari ini" oleh server
+  //   (SEED_TODAY dipakai data historis; laporan operasional bersifat real-time).
+  //   SUMBER = input operator (disimulasikan). HD785: massa + material + nama operator excavator.
+  //   Truk hauling: massa per 2 bucket (batubara).
+  const NOW = new Date();
+  const EXCAVATOR_OPERATORS = [
+    "Yusuf (PC2000)",
+    "Hendra (PC2000)",
+    "Joko (PC1250)",
+    "Rahmat (PC1250)",
+    "Slamet (PC850)",
+    "Wawan (PC850)",
+  ];
+  const HD_DRIVERS = [
+    "Andi Saputra",
+    "Bambang Setiawan",
+    "Citra Dewi",
+    "Dedi Kurniawan",
+    "Eko Wibowo",
+    "Fajar Nugroho",
+    "Gunawan",
+    "Hadi Prasetyo",
+  ];
+  const massRows: Row[] = [];
+  for (let i = 0; i < dumpers.length; i++) {
+    const d = dumpers[i]!;
+    const material = i < 8 ? "coal" : "overburden";
+    const exc = EXCAVATOR_OPERATORS[i % EXCAVATOR_OPERATORS.length]!;
+    const driver = HD_DRIVERS[i % HD_DRIVERS.length]!;
+    const loads = rng.int(8, 12);
+    for (let n = 0; n < loads; n++) {
+      const totalKg = clamp(rng.gaussian(HD785_TARGET_KG * d.meanFactor, d.stdevKg), 60_000, 118_000);
+      massRows.push({
+        id: `MI-${d.id}-${String(n + 1).padStart(3, "0")}`,
+        unitId: d.id,
+        category: "pit_dumper",
+        material,
+        totalT: Number((totalKg / 1000).toFixed(1)),
+        bucket1T: null,
+        bucket2T: null,
+        excavatorOperator: exc,
+        operatorName: driver,
+        timestamp: new Date(NOW.getTime() - rng.int(5, 600) * 60_000), // 5 mnt–10 jam lalu
+        source: "operator",
+      });
+    }
+  }
+  // Truk hauling: sebagian unit melaporkan massa batubara per 2 bucket.
+  for (let i = 0; i < Math.min(8, haulTrucks.length); i++) {
+    const h = haulTrucks[i]!;
+    const b1 = Number(rng.range(14, 18).toFixed(1));
+    const b2 = Number(rng.range(14, 18).toFixed(1));
+    massRows.push({
+      id: `MI-${h.id}-001`,
+      unitId: h.id,
+      category: "haul_truck",
+      material: "coal",
+      totalT: Number((b1 + b2).toFixed(1)),
+      bucket1T: b1,
+      bucket2T: b2,
+      excavatorOperator: null,
+      operatorName: `Operator ${h.id}`,
+      timestamp: new Date(NOW.getTime() - rng.int(5, 300) * 60_000),
+      source: "operator",
+    });
+  }
+  await insertChunked(massRows, (c) => prisma.massInput.createMany({ data: c as never }));
+
   // — CalibrationRecord (Modul B): sebagian perlu kalibrasi (offset/usia) —
   const calibrationRows: Row[] = dumpers.map((d) => ({
     id: `CAL-${d.id}`,
@@ -367,7 +437,7 @@ async function main(): Promise<void> {
   });
 
   // — Ringkasan —
-  const [units, haul, dump, tires, trips, exposures, payloads, calibrations] = await Promise.all([
+  const [units, haul, dump, tires, trips, exposures, payloads, calibrations, massInputs] = await Promise.all([
     prisma.unit.count(),
     prisma.unit.count({ where: { category: "haul_truck" } }),
     prisma.unit.count({ where: { category: "pit_dumper" } }),
@@ -376,6 +446,7 @@ async function main(): Promise<void> {
     prisma.tripSegmentExposure.count(),
     prisma.payloadEvent.count(),
     prisma.calibrationRecord.count(),
+    prisma.massInput.count(),
   ]);
   const [under, ok, over] = await Promise.all([
     prisma.payloadEvent.count({ where: { status: "under" } }),
@@ -395,6 +466,7 @@ async function main(): Promise<void> {
     TripSegmentExposure: exposures,
     PayloadEvent: payloads,
     CalibrationRecord: calibrations,
+    "MassInput (F2 operator)": massInputs,
   });
   console.log(`Payload status — under: ${under} · ok: ${ok} · over: ${over}`);
   if (haul !== 30 || dump !== 12) {

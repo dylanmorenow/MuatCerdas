@@ -6,6 +6,7 @@ export * from "./format";
 export * from "./csv";
 export * from "./roadmap";
 export * from "./ops";
+export * from "./mass";
 
 // Engine domain (PRD §12) — dibangun di M2.
 export * from "./tire/predict"; // §12.1
