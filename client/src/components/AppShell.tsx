@@ -18,32 +18,32 @@ interface NavGroup {
 const NAV: NavGroup[] = [
   { heading: "Ringkasan", items: [{ to: "/", label: "Dashboard", end: true }] },
   {
-    heading: "Modul A — Ban (truk hauling)",
+    heading: "Ban truk hauling",
     items: [
-      { to: "/tire", label: "Daftar & Prediksi", end: true },
+      { to: "/tire", label: "Daftar dan Prediksi", end: true },
       { to: "/tire/recommendations", label: "Rekomendasi" },
     ],
   },
   {
-    heading: "Modul B — Payload (HD785)",
+    heading: "Muatan HD785",
     items: [
       { to: "/payload", label: "Analitik" },
-      { to: "/payload/mass", label: "Mass Monitoring" },
-      { to: "/calibration", label: "Calibration Health" },
+      { to: "/payload/mass", label: "Pemantauan Muatan" },
+      { to: "/calibration", label: "Kesehatan Kalibrasi" },
     ],
   },
   {
-    heading: "Modul C/D — Operasi",
+    heading: "Operasi",
     items: [
-      { to: "/speed", label: "Speed Optimization" },
+      { to: "/speed", label: "Kecepatan Aman" },
       { to: "/roadmap", label: "Peta Jalan" },
     ],
   },
   {
-    heading: "Inti",
+    heading: "Pengaturan",
     items: [
-      { to: "/finance", label: "Finansial & ROI" },
-      { to: "/data", label: "Data / Import" },
+      { to: "/finance", label: "Finansial" },
+      { to: "/data", label: "Data dan Impor" },
     ],
   },
 ];
@@ -65,7 +65,7 @@ export function AppShell() {
       >
         <div className="border-b border-white/10 px-5 py-5">
           <div className="text-lg font-bold">MuatCerdas</div>
-          <div className="text-xs text-white/70">Tire &amp; Payload Intelligence — KPP</div>
+          <div className="text-xs text-white/70">Cerdas kelola ban dan muatan, KPP Mining</div>
         </div>
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
           {NAV.map((group) => (
@@ -94,7 +94,7 @@ export function AppShell() {
         <div className="border-t border-white/10 px-5 py-3">
           {authCfg?.enabled && me?.username && (
             <div className="mb-1.5 text-[11px] text-white/70">
-              Masuk: <span className="font-medium text-white">{me.name ?? me.username}</span> ({me.role})
+              Masuk sebagai <span className="font-medium text-white">{me.name ?? me.username}</span> ({me.role})
             </div>
           )}
           {authCfg?.enabled && (
@@ -108,7 +108,7 @@ export function AppShell() {
               Keluar
             </button>
           )}
-          <div className="text-[10px] text-white/50">Data contoh / import · bukan telematik live</div>
+          <div className="text-[10px] text-white/50">Data contoh dan unggahan, bukan data langsung dari alat</div>
         </div>
       </aside>
 

@@ -12,7 +12,7 @@ import {
 import { useSpeed, useSaveSpeedParams, useResetSpeedParams, type SpeedUnitRow, type Hd785SpeedRow } from "../api/speed";
 import { PageHeader, Card, Loading, ErrorState, InfoTip, Badge, cx } from "../components/ui";
 
-const kmh = (n: number) => (Number.isFinite(n) ? `${formatNumber(n, 1)} km/jam` : "—");
+const kmh = (n: number) => (Number.isFinite(n) ? `${formatNumber(n, 1)} km/jam` : "-");
 const ton = (n: number) => `${formatNumber(n, 1)} t`;
 
 export function SpeedOptimization() {
@@ -28,7 +28,7 @@ export function SpeedOptimization() {
   if (isLoading || !form || !data) {
     return (
       <>
-        <PageHeader title="Kecepatan Aman (TKPH)" />
+        <PageHeader title="Kecepatan Aman" />
         {error ? <ErrorState message={(error as Error).message} onRetry={() => void refetch()} /> : <Loading />}
       </>
     );
@@ -80,8 +80,8 @@ export function SpeedOptimization() {
   return (
     <>
       <PageHeader
-        title="Kecepatan Aman (TKPH)"
-        subtitle="Modul C — batas kecepatan dari beban ban (TKPH) vs target produksi. Deterministik (bukan AI). Semua angka ASUMSI."
+        title="Kecepatan Aman"
+        subtitle="Batas kecepatan aman berdasarkan beban yang ditanggung ban, dibandingkan dengan target produksi. Dihitung dengan rumus pasti, bukan tebakan AI. Semua angka adalah asumsi yang bisa diubah."
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -89,7 +89,7 @@ export function SpeedOptimization() {
               disabled={reset.isPending}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
             >
-              Reset ke default
+              Kembalikan ke awal
             </button>
             <button
               onClick={() => form && save.mutate(form)}
@@ -114,18 +114,18 @@ export function SpeedOptimization() {
             <span className={cx("h-10 w-10 flex-shrink-0 rounded-full", conflict ? "bg-red-500" : "bg-emerald-500")} />
             <div>
               <div className="text-xl font-bold text-slate-800">
-                {conflict ? "KONFLIK — target melebihi batas ban" : "AMAN — target tercapai dalam batas ban"}
+                {conflict ? "Konflik. Target hanya tercapai bila melebihi batas aman ban." : "Aman. Target tercapai tanpa melebihi batas ban."}
               </div>
               <div className="text-sm text-slate-600">
-                Butuh {kmh(prod.vRequiredWorkKmh)} · Batas aman {kmh(vmaxWork)} (basis kerja rata-rata)
+                Perlu {kmh(prod.vRequiredWorkKmh)}. Batas aman {kmh(vmaxWork)} (kecepatan rata-rata kerja)
                 {!conflict && decision.recommendedWorkKmh != null && (
-                  <> · Rekomendasi jalan {kmh(decision.recommendedWorkKmh)}</>
+                  <>. Disarankan jalan di {kmh(decision.recommendedWorkKmh)}</>
                 )}
               </div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs uppercase tracking-wide text-slate-500">Margin</div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Selisih</div>
             <div className={cx("text-lg font-bold", conflict ? "text-red-600" : "text-emerald-600")}>
               {kmh(decision.marginKmh)}
             </div>
@@ -135,16 +135,16 @@ export function SpeedOptimization() {
         {conflict && (
           <div className="mt-4 border-t border-red-200 pt-3">
             <div className="mb-2 text-sm font-semibold text-slate-700">
-              JANGAN ngebut. Opsi solusi terukur:
-              <InfoTip text="Opsi basis 'work' menyelesaikan konflik TKPH; basis 'travel' hanya memperbaiki kelayakan kecepatan saat bergerak (§C.5)." />
+              Jangan ngebut. Pilihan solusi:
+              <InfoTip text="Pilihan bertanda 'beban ban' benar-benar menyelesaikan masalah batas ban. Pilihan bertanda 'waktu tempuh' hanya membuat kecepatan saat jalan lebih masuk akal." />
             </div>
             {decision.options.length === 0 ? (
-              <p className="text-sm text-slate-500">Tidak ada opsi terukur pada konteks ini.</p>
+              <p className="text-sm text-slate-500">Tidak ada pilihan solusi untuk kondisi ini.</p>
             ) : (
               <ul className="space-y-1.5">
                 {decision.options.map((o) => (
                   <li key={o.kind} className="flex items-start gap-2 text-sm text-slate-700">
-                    <Badge tone={o.basis === "work" ? "blue" : "slate"}>{o.basis === "work" ? "TKPH" : "travel"}</Badge>
+                    <Badge tone={o.basis === "work" ? "blue" : "slate"}>{o.basis === "work" ? "beban ban" : "waktu tempuh"}</Badge>
                     <span>{o.label}</span>
                   </li>
                 ))}
@@ -159,39 +159,39 @@ export function SpeedOptimization() {
         <div className="space-y-5 lg:col-span-2">
           <Card>
             <h2 className="mb-3 font-semibold text-slate-800">
-              Target produksi (§C.4)
-              <InfoTip text="Rantai cycle time → kecepatan yang dibutuhkan. Rute CPP→Jetty (truk hauling)." />
+              Target produksi
+              <InfoTip text="Dari target produksi dihitung kecepatan yang dibutuhkan, lewat waktu satu siklus angkut. Rute CPP ke Jetty untuk truk hauling." />
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <NumberField label="Target harian" unit="t/hari" value={form.dailyTargetTon} onChange={(v) => set("dailyTargetTon", v)} />
+              <NumberField label="Target harian" unit="ton/hari" value={form.dailyTargetTon} onChange={(v) => set("dailyTargetTon", v)} />
               <NumberField label="Jam kerja efektif" unit="jam/hari" value={form.effectiveWorkHoursPerDay} onChange={(v) => set("effectiveWorkHoursPerDay", v)} />
-              <NumberField label="Waktu tetap/siklus" unit="jam" step={0.05} value={form.fixedTimeHours} onChange={(v) => set("fixedTimeHours", v)} hint="loading+dumping+manuver+antri" />
+              <NumberField label="Waktu diam per siklus" unit="jam" step={0.05} value={form.fixedTimeHours} onChange={(v) => set("fixedTimeHours", v)} hint="muat, bongkar, manuver, antre" />
               <NumberField label="Jarak satu arah" unit="km" value={form.oneWayKm} onChange={(v) => set("oneWayKm", v)} />
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500 sm:grid-cols-3">
-              <Mini label="Trip/unit/hari" value={formatNumber(prod.tripsPerUnitPerDay, 1)} />
-              <Mini label="Cycle tersedia" value={`${formatNumber(prod.cycleTimeAvailableHours, 2)} jam`} />
-              <Mini label="V butuh (travel)" value={kmh(prod.vRequiredTravelKmh)} />
-              <Mini label="V butuh (kerja)" value={kmh(prod.vRequiredWorkKmh)} />
-              <Mini label="travelFraction" value={formatNumber(prod.travelFraction, 3)} />
-              <Mini label="Armada (unit)" value={formatNumber(fi.unitCount, 0)} />
+              <Mini label="Ritase per unit per hari" value={formatNumber(prod.tripsPerUnitPerDay, 1)} />
+              <Mini label="Waktu per siklus" value={`${formatNumber(prod.cycleTimeAvailableHours, 2)} jam`} />
+              <Mini label="Kecepatan perlu (saat jalan)" value={kmh(prod.vRequiredTravelKmh)} />
+              <Mini label="Kecepatan perlu (rata-rata)" value={kmh(prod.vRequiredWorkKmh)} />
+              <Mini label="Porsi waktu jalan" value={formatNumber(prod.travelFraction, 3)} />
+              <Mini label="Jumlah unit" value={formatNumber(fi.unitCount, 0)} />
             </dl>
           </Card>
 
           <Card>
             <h2 className="mb-3 font-semibold text-slate-800">
-              TKPH ban & beban (§C.1–§C.2)
-              <InfoTip text="Beban ban kritis Qa & batas TKPH ban. Katalog TKPH per model = WAJIB DICARI dari brosur pabrik." />
+              Batas beban ban dan beban aktual
+              <InfoTip text="Beban yang ditanggung ban dan batas amannya. Angka batas tiap merek ban perlu dicari dari brosur pabrik." />
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <NumberField label="Koreksi suhu" step={0.05} value={form.tempCorrectionFactor} onChange={(v) => set("tempCorrectionFactor", v)} />
-              <NumberField label="Koreksi situs" step={0.05} value={form.siteCorrectionFactor} onChange={(v) => set("siteCorrectionFactor", v)} />
-              <NumberField label="Fraksi beban ban terberat" step={0.01} value={form.loadShareHeaviestPosition} onChange={(v) => set("loadShareHeaviestPosition", v)} />
-              <NumberField label="Jarak/shift (Vm)" unit="km" value={form.distancePerShiftKm} onChange={(v) => set("distancePerShiftKm", v)} />
-              <NumberField label="Jam/shift (Vm)" unit="jam" value={form.workHoursPerShift} onChange={(v) => set("workHoursPerShift", v)} />
+              <NumberField label="Faktor koreksi suhu" step={0.05} value={form.tempCorrectionFactor} onChange={(v) => set("tempCorrectionFactor", v)} />
+              <NumberField label="Faktor koreksi lokasi" step={0.05} value={form.siteCorrectionFactor} onChange={(v) => set("siteCorrectionFactor", v)} />
+              <NumberField label="Porsi beban di ban terberat" step={0.01} value={form.loadShareHeaviestPosition} onChange={(v) => set("loadShareHeaviestPosition", v)} />
+              <NumberField label="Jarak per shift" unit="km" value={form.distancePerShiftKm} onChange={(v) => set("distancePerShiftKm", v)} />
+              <NumberField label="Jam kerja per shift" unit="jam" value={form.workHoursPerShift} onChange={(v) => set("workHoursPerShift", v)} />
             </div>
             <p className="mt-3 text-xs text-slate-400">
-              Vm (kecepatan kerja rata-rata) = {kmh(data.vmKmh)} · Qa representatif {ton(repQa)} · TKPH_ban representatif {formatNumber(repTkphTire, 0)}
+              Kecepatan rata-rata kerja {kmh(data.vmKmh)}. Beban ban {ton(repQa)}. Batas beban ban sekitar {formatNumber(repTkphTire, 0)}.
             </p>
           </Card>
         </div>
@@ -200,23 +200,23 @@ export function SpeedOptimization() {
         <div className="space-y-4">
           {/* Pakai <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-emerald-100">Panduan driver — kecepatan maks</div>
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan maksimum untuk driver</div>
             <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravel)}</div>
             <div className="mt-1 text-xs text-emerald-50">
-              basis travel (spidometer). Setara {kmh(vmaxWork)} kerja rata-rata.
+              ini kecepatan di spidometer. Sama dengan {kmh(vmaxWork)} rata-rata kerja.
             </div>
             <div className="mt-3 border-t border-white/30 pt-3 text-sm text-emerald-50">
               {conflict
-                ? "Target sekarang menuntut kecepatan di atas batas ban — turunkan beban/target, jangan ngebut."
-                : "Jalan pada rekomendasi; jaga ≤ batas agar ban awet."}
+                ? "Target sekarang butuh kecepatan di atas batas ban. Turunkan muatan atau target, jangan ngebut."
+                : "Jalan sesuai rekomendasi. Jaga jangan melebihi batas supaya ban awet."}
             </div>
           </div>
 
           <Card>
-            <h2 className="mb-2 font-semibold text-slate-800">Rekonsiliasi satuan (§C.5)</h2>
+            <h2 className="mb-2 font-semibold text-slate-800">Penyamaan satuan kecepatan</h2>
             <p className="text-xs text-slate-500">
-              Keputusan dibandingkan pada <b>kecepatan kerja rata-rata</b> (Vm, native TKPH). Angka driver dikonversi ke
-              <b> basis travel</b> via travelFraction = {formatNumber(prod.travelFraction, 3)}.
+              Keputusan dibandingkan memakai <b>kecepatan rata-rata kerja</b> (termasuk waktu berhenti). Angka untuk
+              driver diubah ke <b>kecepatan di spidometer</b> memakai porsi waktu jalan {formatNumber(prod.travelFraction, 3)}.
             </p>
           </Card>
         </div>
@@ -226,8 +226,8 @@ export function SpeedOptimization() {
       <Card className="mt-5 overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
-            Per unit — truk hauling
-            <InfoTip text="Vmax dihitung dari muatan & ban tiap unit. Tabel mengikuti parameter TERSIMPAN (klik Simpan untuk perbarui)." />
+            Per unit truk hauling
+            <InfoTip text="Kecepatan maksimum dihitung dari muatan dan ban tiap unit. Tabel memakai angka yang tersimpan. Klik Simpan untuk memperbarui." />
           </h2>
           <span className="text-xs text-slate-400">{data.units.length} unit</span>
         </div>
@@ -238,10 +238,10 @@ export function SpeedOptimization() {
                 <th className="px-4 py-2.5 font-medium">Unit</th>
                 <th className="px-4 py-2.5 font-medium">Ban</th>
                 <th className="px-4 py-2.5 font-medium">Muatan</th>
-                <th className="px-4 py-2.5 font-medium">Qa</th>
-                <th className="px-4 py-2.5 font-medium">TKPH site / ban</th>
-                <th className="px-4 py-2.5 font-medium">Vmax kerja</th>
-                <th className="px-4 py-2.5 font-medium">Vmax driver</th>
+                <th className="px-4 py-2.5 font-medium">Beban ban</th>
+                <th className="px-4 py-2.5 font-medium">Beban vs batas</th>
+                <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
+                <th className="px-4 py-2.5 font-medium">Maks (spidometer)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -258,8 +258,8 @@ export function SpeedOptimization() {
       <Card className="mt-5 overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
-            HD785 — Vmax dari payload (ringkas)
-            <InfoTip text="Panel ringkas: muatan HD785 (Modul B) → Qa → Vmax. Tanpa rantai target produksi (itu untuk truk hauling)." />
+            HD785: kecepatan maksimum dari muatan
+            <InfoTip text="Ringkasan untuk HD785. Dari muatan dihitung beban ban lalu kecepatan maksimum aman. Tanpa hitungan target produksi, karena itu khusus truk hauling." />
           </h2>
           <span className="text-xs text-slate-400">{data.hd785.length} unit</span>
         </div>
@@ -268,11 +268,11 @@ export function SpeedOptimization() {
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Unit</th>
-                <th className="px-4 py-2.5 font-medium">Muatan / target</th>
-                <th className="px-4 py-2.5 font-medium">Qa</th>
-                <th className="px-4 py-2.5 font-medium">TKPH ban</th>
-                <th className="px-4 py-2.5 font-medium">Vmax kerja</th>
-                <th className="px-4 py-2.5 font-medium">Vmax driver</th>
+                <th className="px-4 py-2.5 font-medium">Muatan vs target</th>
+                <th className="px-4 py-2.5 font-medium">Beban ban</th>
+                <th className="px-4 py-2.5 font-medium">Batas beban ban</th>
+                <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
+                <th className="px-4 py-2.5 font-medium">Maks (spidometer)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -286,8 +286,8 @@ export function SpeedOptimization() {
       </Card>
 
       <p className="mt-4 text-xs text-slate-400">
-        Catatan jujur: seluruh parameter bertanda ASUMSI; katalog TKPH per model ban WAJIB DICARI dari brosur pabrik
-        (docs/ASSUMPTIONS.md §F). Keluaran atas data contoh/impor — bukan feed live dari truk.
+        Catatan jujur. Semua angka di sini adalah asumsi. Angka batas beban tiap merek ban masih perlu dicari dari brosur
+        pabrik. Hasil dihitung dari data contoh atau data yang diunggah, bukan dari alat langsung di truk.
       </p>
     </>
   );
@@ -297,7 +297,7 @@ function UnitRow({ u }: { u: SpeedUnitRow }) {
   return (
     <tr className={cx(u.exceedsRequired && "bg-red-50/50")}>
       <td className="px-4 py-2.5 font-medium text-slate-700">{u.id}<div className="text-xs font-normal text-slate-400">{u.model}</div></td>
-      <td className="px-4 py-2.5 text-slate-600">{u.tireModel ?? "—"}</td>
+      <td className="px-4 py-2.5 text-slate-600">{u.tireModel ?? "-"}</td>
       <td className="px-4 py-2.5 text-slate-600">
         {ton(u.payloadT)} {u.overTarget && <Badge tone="amber">over</Badge>}
       </td>

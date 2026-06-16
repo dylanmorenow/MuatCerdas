@@ -7,19 +7,19 @@ const META: Record<LoadingStatus, { ring: string; dot: string; label: string; su
     ring: "border-emerald-300 bg-emerald-50",
     dot: "bg-emerald-500",
     label: "HIJAU",
-    sub: "Masih di bawah target — lanjut muat",
+    sub: "Masih di bawah target, lanjut muat",
   },
   amber: {
     ring: "border-amber-300 bg-amber-50",
     dot: "bg-amber-400",
     label: "KUNING",
-    sub: "Dalam band target (95–110%) — bersiap stop",
+    sub: "Sudah masuk target (95 sampai 110%), bersiap berhenti",
   },
   red: {
     ring: "border-red-300 bg-red-50",
     dot: "bg-red-500",
-    label: "MERAH — STOP",
-    sub: "Overload (>110% target)",
+    label: "MERAH, STOP",
+    sub: "Muatan berlebih (di atas 110% target)",
   },
 };
 

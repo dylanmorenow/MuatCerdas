@@ -38,8 +38,8 @@ export function MassMonitoring() {
   return (
     <>
       <PageHeader
-        title="Mass Monitoring"
-        subtitle="Laporan massa muatan HD785 real-time dari input operator (massa, material, operator excavator) + panduan pemuatan. Data contoh/operator — bukan feed timbangan live."
+        title="Pemantauan Muatan"
+        subtitle="Laporan langsung massa muatan tiap HD785 dari operator. Menampilkan berapa ton, jenis materialnya, dan operator excavator yang memuat, beserta panduan pemuatan. Memakai data contoh, bukan timbangan langsung."
       />
 
       {isLoading && <Loading />}
@@ -50,16 +50,16 @@ export function MassMonitoring() {
           <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Batubara hari ini" value={`${formatNumber(data.todayCoalT)} t`} hint="dari laporan operator" />
             <Stat label="Overburden hari ini" value={`${formatNumber(data.todayOverburdenT)} t`} />
-            <Stat label="Laporan hari ini" value={formatNumber(data.reportsToday)} hint="event massa" />
-            <Stat label="HD785 terlapor" value={formatNumber(data.hd785.length)} hint="unit dgn laporan" />
+            <Stat label="Laporan hari ini" value={formatNumber(data.reportsToday)} hint="catatan massa" />
+            <Stat label="HD785 sudah melapor" value={formatNumber(data.hd785.length)} hint="jumlah unit" />
           </div>
 
           {/* Tabel real-time per HD785 */}
           <Card className="overflow-hidden p-0">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
               <h2 className="font-semibold text-slate-800">
-                Real-time per HD785
-                <InfoTip text="Muatan TERAKHIR yang dilaporkan tiap HD785. Warna: hijau pas (95–110% × 91 t), kuning kurang, merah overload. Auto-refresh tiap 15 dtk." />
+                Muatan terbaru tiap HD785
+                <InfoTip text="Muatan terakhir yang dilaporkan tiap HD785. Warna hijau berarti pas, kuning berarti kurang, merah berarti berlebih. Data diperbarui otomatis tiap 15 detik." />
               </h2>
               <span className="text-xs text-slate-400">target 91 t</span>
             </div>
@@ -80,7 +80,7 @@ export function MassMonitoring() {
                   {data.hd785.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                        Belum ada laporan massa. Operator HD785 mengirim dari Driver Dashboard.
+                        Belum ada laporan. Operator HD785 mengirimnya dari halaman driver.
                       </td>
                     </tr>
                   )}
@@ -96,7 +96,7 @@ export function MassMonitoring() {
                         <td className="px-4 py-2.5">
                           <Badge tone={st.tone}>{st.label}</Badge>
                         </td>
-                        <td className="px-4 py-2.5 text-slate-600">{r.excavatorOperator ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{r.excavatorOperator ?? "-"}</td>
                         <td className="px-4 py-2.5 text-slate-600">{r.operatorName}</td>
                         <td className="px-4 py-2.5 text-xs text-slate-400">{timeAgo(r.timestamp)}</td>
                       </tr>
@@ -182,8 +182,8 @@ function ExcavatorGuidance() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card>
           <h3 className="mb-1 font-semibold text-slate-800">
-            Loading policy
-            <InfoTip text="Generator jumlah pass & band target. Kapasitas bucket & densitas = ASUMSI, dapat dikoreksi." />
+            Panduan jumlah muatan
+            <InfoTip text="Menghitung berapa kali muat dan rentang target. Ukuran bucket dan kepadatan material adalah asumsi yang bisa diubah." />
           </h3>
           <div className="mt-3 grid grid-cols-3 gap-3">
             <Field label="Excavator">
@@ -205,16 +205,16 @@ function ExcavatorGuidance() {
             </Field>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <Stat label="Per pass" value={`${formatNumber(policy.perPassKg / 1000, 1)} t`} hint={`${formatNumber(bucketM3, 1)} m³ × ${formatNumber(density, 2)} t/m³`} />
-            <Stat label="Pass disarankan" value={`${policy.suggestedPasses}×`} hint={`≈ ${formatNumber(Math.round(policy.effectivePayloadKg / 1000))} t`} />
-            <Stat label="Band target" value={`${formatNumber(policy.targetBandKg[0] / 1000, 1)}–${formatNumber(policy.targetBandKg[1] / 1000, 1)} t`} hint="95–110%" />
+            <Stat label="Per sekali muat" value={`${formatNumber(policy.perPassKg / 1000, 1)} t`} hint={`${formatNumber(bucketM3, 1)} m³ dikali ${formatNumber(density, 2)} ton/m³`} />
+            <Stat label="Jumlah muat disarankan" value={`${policy.suggestedPasses}×`} hint={`sekitar ${formatNumber(Math.round(policy.effectivePayloadKg / 1000))} t`} />
+            <Stat label="Rentang target" value={`${formatNumber(policy.targetBandKg[0] / 1000, 1)} sampai ${formatNumber(policy.targetBandKg[1] / 1000, 1)} t`} hint="95 sampai 110%" />
           </div>
         </Card>
 
         <Card>
           <h3 className="mb-1 font-semibold text-slate-800">
             Simulasi pemuatan
-            <InfoTip text="Tambah pass untuk melihat total berjalan & indikator. §12.5: <95% kuning, 95–110% hijau, >110% merah." />
+            <InfoTip text="Tambah muatan untuk melihat total berjalan dan indikatornya. Di bawah 95% kuning, 95 sampai 110% hijau, di atas 110% merah." />
           </h3>
           <LoadingLight status={status} />
           <div className="mt-4 flex items-baseline justify-between">
@@ -229,10 +229,10 @@ function ExcavatorGuidance() {
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button onClick={() => setBuckets((b) => [...b, policy.perPassKg])} className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90">
-              + 1 pass (≈{formatNumber(policy.perPassKg / 1000, 1)} t)
+              Tambah 1 muatan (sekitar {formatNumber(policy.perPassKg / 1000, 1)} t)
             </button>
             <button onClick={() => setBuckets([])} className="ml-auto rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100">
-              Reset
+              Ulangi
             </button>
           </div>
         </Card>

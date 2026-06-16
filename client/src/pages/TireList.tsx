@@ -24,7 +24,7 @@ export function TireList() {
   return (
     <>
       <PageHeader
-        title="Tire — Daftar & Prediksi"
+        title="Daftar dan Prediksi Ban"
         actions={
           data ? (
             <ExportButton
@@ -56,11 +56,11 @@ export function TireList() {
                   <th className="px-4 py-3 font-medium">Model</th>
                   <th className="px-4 py-3 font-medium">
                     Sisa umur
-                    <InfoTip text="Prediksi umur ban (model regresi §12.1) dikurangi km berjalan set ban saat ini." />
+                    <InfoTip text="Perkiraan total umur ban dikurangi jarak yang sudah ditempuh ban saat ini." />
                   </th>
                   <th className="px-4 py-3 font-medium">
-                    Keyakinan model
-                    <InfoTip text="Seberapa cocok model regresi dengan data historis unit (R²): makin tinggi makin dapat dipercaya. Badge 'estimasi awal' = data minim, dipakai heuristik umur terbaik merek." />
+                    Tingkat keyakinan
+                    <InfoTip text="Seberapa cocok perhitungan dengan data masa lalu unit ini. Makin tinggi makin bisa dipercaya. Tanda 'perkiraan awal' berarti datanya masih sedikit, jadi dipakai angka umum dari merek ban." />
                   </th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
@@ -79,7 +79,7 @@ export function TireList() {
                       {formatPersen(u.confidence)}
                       {u.usedFallback && (
                         <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
-                          estimasi awal
+                          perkiraan awal
                         </span>
                       )}
                     </td>
@@ -91,7 +91,7 @@ export function TireList() {
               </tbody>
             </table>
           </Card>
-          <p className="mt-3 text-xs text-slate-400">Klik baris untuk detail riwayat ban & atribusi penyebab.</p>
+          <p className="mt-3 text-xs text-slate-400">Klik salah satu baris untuk melihat riwayat ban dan penyebab keausannya.</p>
         </>
       )}
     </>

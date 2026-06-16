@@ -127,7 +127,7 @@ export async function getOperatorData(): Promise<{
   const hd = rows.filter((r) => r.category === "pit_dumper");
   const haul = rows.filter((r) => r.category === "haul_truck");
   const groups = [
-    { key: "hd785-mass", label: "Massa muatan HD785 (coal / overburden)", rows: hd },
+    { key: "hd785-mass", label: "Massa muatan HD785 (batubara atau overburden)", rows: hd },
     { key: "haul-bucket", label: "Massa truk hauling (per bucket)", rows: haul },
   ].filter((g) => g.rows.length > 0);
   return { groups, total: rows.length };

@@ -36,8 +36,8 @@ export function PayloadAnalytics() {
   return (
     <>
       <PageHeader
-        title="Payload — Analitik"
-        subtitle="Distribusi payload HD785 terhadap target 91 t: % under / ok / over, statistik, dan tren — per unit & operator (shift 1 & 2)."
+        title="Analitik Muatan"
+        subtitle="Sebaran muatan HD785 dibanding target 91 ton. Menampilkan persentase muatan kurang, pas, dan berlebih, beserta rata-rata dan trennya per unit dan per operator."
         actions={
           data ? (
             <ExportButton
@@ -107,18 +107,18 @@ export function PayloadAnalytics() {
 
           {/* KPI */}
           <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Stat label="Event payload" value={formatNumber(data.overall.count)} hint={`rata-rata ${formatTon(data.overall.mean)}`} />
-            <Stat label="Under (<95%)" value={<span className="text-amber-600">{formatPersen(data.overall.underPct)}</span>} hint={`${formatNumber(data.overall.underCount)} event`} />
-            <Stat label="OK (95–110%)" value={<span className="text-emerald-600">{formatPersen(data.overall.okPct)}</span>} hint={`${formatNumber(data.overall.okCount)} event`} />
-            <Stat label="Over (>110%)" value={<span className="text-red-600">{formatPersen(data.overall.overPct)}</span>} hint={`${formatNumber(data.overall.overCount)} event`} />
+            <Stat label="Total catatan muatan" value={formatNumber(data.overall.count)} hint={`rata-rata ${formatTon(data.overall.mean)}`} />
+            <Stat label="Muatan kurang (di bawah 95%)" value={<span className="text-amber-600">{formatPersen(data.overall.underPct)}</span>} hint={`${formatNumber(data.overall.underCount)} catatan`} />
+            <Stat label="Muatan pas (95 sampai 110%)" value={<span className="text-emerald-600">{formatPersen(data.overall.okPct)}</span>} hint={`${formatNumber(data.overall.okCount)} catatan`} />
+            <Stat label="Muatan berlebih (di atas 110%)" value={<span className="text-red-600">{formatPersen(data.overall.overPct)}</span>} hint={`${formatNumber(data.overall.overCount)} catatan`} />
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {/* Histogram */}
             <Card>
               <h2 className="mb-3 font-semibold text-slate-800">
-                Distribusi payload (vs 91 t)
-                <InfoTip text="Sebaran payload terukur. Bar dwarna: kuning <95%, hijau 95–110%, merah >110% target." />
+                Sebaran muatan (dibanding 91 ton)
+                <InfoTip text="Sebaran muatan yang terukur. Warna batang: kuning untuk muatan kurang, hijau untuk pas, merah untuk berlebih." />
               </h2>
               <div style={{ width: "100%", height: 240 }}>
                 <ResponsiveContainer>
@@ -126,7 +126,7 @@ export function PayloadAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={1} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [`${formatNumber(Number(v))} event`, "Jumlah"]} labelFormatter={(l) => `${l} t`} />
+                    <Tooltip formatter={(v) => [`${formatNumber(Number(v))} catatan`, "Jumlah"]} labelFormatter={(l) => `${l} t`} />
                     <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                       {data.histogram.map((b) => (
                         <Cell key={b.label} fill={bandColor((b.from + b.to) / 2)} />
@@ -135,12 +135,12 @@ export function PayloadAnalytics() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-1 text-center text-xs text-slate-400">payload (ton)</p>
+              <p className="mt-1 text-center text-xs text-slate-400">muatan (ton)</p>
             </Card>
 
             {/* Tren */}
             <Card>
-              <h2 className="mb-3 font-semibold text-slate-800">Tren rata-rata payload</h2>
+              <h2 className="mb-3 font-semibold text-slate-800">Tren rata-rata muatan</h2>
               <div style={{ width: "100%", height: 240 }}>
                 <ResponsiveContainer>
                   <LineChart data={data.trend} margin={{ top: 4, right: 8, left: -8, bottom: 4 }}>
@@ -158,7 +158,7 @@ export function PayloadAnalytics() {
 
           {/* Breakdown per unit (dengan operator shift 1 & 2) + per operator */}
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <BreakdownTable title="Per unit (HD785)" rows={data.byUnit} shiftOperators={data.shiftOperatorsByUnit} />
+            <BreakdownTable title="Per unit HD785" rows={data.byUnit} shiftOperators={data.shiftOperatorsByUnit} />
             <BreakdownTable title="Per operator" rows={data.byOperator} />
           </div>
         </>
@@ -190,20 +190,20 @@ function BreakdownTable({
               {showShift && (
                 <>
                   <th className="px-4 py-2.5 font-medium">
-                    Shift 1
-                    <InfoTip text="Operator dominan shift siang (day) untuk unit ini, dari log payload." />
+                    Operator siang
+                    <InfoTip text="Operator yang paling sering memegang unit ini di shift siang, dari catatan muatan." />
                   </th>
                   <th className="px-4 py-2.5 font-medium">
-                    Shift 2
-                    <InfoTip text="Operator dominan shift malam (night) untuk unit ini, dari log payload." />
+                    Operator malam
+                    <InfoTip text="Operator yang paling sering memegang unit ini di shift malam, dari catatan muatan." />
                   </th>
                 </>
               )}
-              <th className="px-4 py-2.5 font-medium">Event</th>
-              <th className="px-4 py-2.5 font-medium">Mean</th>
-              <th className="px-4 py-2.5 font-medium">Under</th>
-              <th className="px-4 py-2.5 font-medium">OK</th>
-              <th className="px-4 py-2.5 font-medium">Over</th>
+              <th className="px-4 py-2.5 font-medium">Catatan</th>
+              <th className="px-4 py-2.5 font-medium">Rata-rata</th>
+              <th className="px-4 py-2.5 font-medium">Kurang</th>
+              <th className="px-4 py-2.5 font-medium">Pas</th>
+              <th className="px-4 py-2.5 font-medium">Berlebih</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -212,8 +212,8 @@ function BreakdownTable({
                 <td className="px-4 py-2.5 font-medium text-slate-700">{r.label}</td>
                 {showShift && (
                   <>
-                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.day ?? "—"}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.night ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.day ?? "-"}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{shiftOperators?.[r.key]?.night ?? "-"}</td>
                   </>
                 )}
                 <td className="px-4 py-2.5 text-slate-500">{formatNumber(r.stats.count)}</td>

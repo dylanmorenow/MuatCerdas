@@ -11,8 +11,8 @@ export function TireRecommendations() {
   return (
     <>
       <PageHeader
-        title="Tire — Rekomendasi"
-        subtitle="Tindakan prioritas per unit untuk memperpanjang umur ban, beserta estimasi kerugian bila tindakan tidak dilakukan."
+        title="Rekomendasi Ban"
+        subtitle="Tindakan yang disarankan untuk tiap unit supaya ban lebih awet, beserta perkiraan kerugian kalau tindakan tidak dilakukan."
         actions={
           data ? (
             <ExportButton
@@ -32,9 +32,9 @@ export function TireRecommendations() {
           <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Stat label="Total tindakan" value={formatNumber(data.length)} />
             <Stat
-              label="Estimasi kerugian/th bila diabaikan"
+              label="Perkiraan kerugian per tahun bila dibiarkan"
               value={<span className="text-red-600">{formatRupiah(totalLoss)}</span>}
-              hint={<>biaya berulang bila tak ditangani<InfoTip text="Porsi shortfall umur ban tiap faktor × biaya ban terhindarkan per unit × capture rate (§12.7) — yaitu biaya yang terus ditanggung bila tindakan tidak dilakukan. Asumsi editable di Finansial." /></>}
+              hint={<>biaya yang terus muncul bila tidak ditangani<InfoTip text="Perkiraan biaya yang terus ditanggung tiap tahun kalau penyebab keausan ban tidak diperbaiki. Angkanya bisa diatur di halaman Finansial." /></>}
             />
             <Stat label="Unit terdampak" value={formatNumber(new Set(data.map((r) => r.unitId)).size)} />
           </div>
@@ -47,7 +47,7 @@ export function TireRecommendations() {
                   <th className="px-4 py-3 font-medium">Tindakan</th>
                   <th className="px-4 py-3 font-medium">Faktor</th>
                   <th className="px-4 py-3 font-medium">Alasan</th>
-                  <th className="px-4 py-3 text-right font-medium">Estimasi kerugian/th bila diabaikan</th>
+                  <th className="px-4 py-3 text-right font-medium">Perkiraan kerugian per tahun</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -65,7 +65,7 @@ export function TireRecommendations() {
                     </td>
                     <td className="px-4 py-3 text-slate-500">{r.reason}</td>
                     <td className="px-4 py-3 text-right font-medium text-slate-800">
-                      {r.estimatedSavingsIdr > 0 ? formatRupiah(r.estimatedSavingsIdr) : "—"}
+                      {r.estimatedSavingsIdr > 0 ? formatRupiah(r.estimatedSavingsIdr) : "-"}
                     </td>
                   </tr>
                 ))}

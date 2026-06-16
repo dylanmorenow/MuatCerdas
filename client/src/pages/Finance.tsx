@@ -49,8 +49,8 @@ export function Finance() {
   return (
     <>
       <PageHeader
-        title="Finansial & ROI"
-        subtitle="Asumsi editable (tersimpan di DB) — hasil dihitung langsung. Semua nilai bertanda ASUMSI."
+        title="Finansial"
+        subtitle="Semua asumsi bisa diubah dan langsung tersimpan, lalu hasilnya dihitung ulang seketika. Semua nilai di sini adalah asumsi."
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -58,7 +58,7 @@ export function Finance() {
               disabled={reset.isPending}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
             >
-              Reset ke default
+              Kembalikan ke awal
             </button>
             <button
               onClick={() => save.mutate(form)}
@@ -75,49 +75,49 @@ export function Finance() {
         {/* Form asumsi */}
         <div className="space-y-5 lg:col-span-2">
           <Card>
-            <h2 className="mb-3 font-semibold text-slate-800">Modul A — Ban</h2>
+            <h2 className="mb-3 font-semibold text-slate-800">Ban truk hauling</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <NumberField label="Harga ban" unit="Rp" value={form.tirePriceIdr} onChange={(v) => set("tirePriceIdr", v)} hint={formatRupiah(form.tirePriceIdr)} />
-              <NumberField label="Ban / unit" value={form.tiresPerUnit} onChange={(v) => set("tiresPerUnit", v)} />
-              <NumberField label="Km / tahun" unit="km" value={form.kmPerYear} onChange={(v) => set("kmPerYear", v)} />
+              <NumberField label="Jumlah ban per unit" value={form.tiresPerUnit} onChange={(v) => set("tiresPerUnit", v)} />
+              <NumberField label="Km per tahun" unit="km" value={form.kmPerYear} onChange={(v) => set("kmPerYear", v)} />
               <NumberField
-                label="Umur aktual"
+                label="Umur ban sekarang"
                 unit="km"
                 value={form.tireLifeActualKm}
                 onChange={(v) => set("tireLifeActualKm", v)}
                 disabled={useModelLife}
-                hint={useModelLife ? `pakai model: ${formatNumber(derived.modelTireLifeKm)}` : undefined}
+                hint={useModelLife ? `pakai hasil hitung: ${formatNumber(derived.modelTireLifeKm)}` : undefined}
               />
-              <NumberField label="Umur best-practice" unit="km" value={form.tireLifeBestKm} onChange={(v) => set("tireLifeBestKm", v)} />
-              <NumberField label="Capture rate" unit="0–1" step={0.05} value={form.captureRate} onChange={(v) => set("captureRate", v)} hint={formatPersen(form.captureRate)} />
-              <NumberField label="Ukuran armada" value={form.fleetSize} onChange={(v) => set("fleetSize", v)} />
+              <NumberField label="Umur ban ideal" unit="km" value={form.tireLifeBestKm} onChange={(v) => set("tireLifeBestKm", v)} />
+              <NumberField label="Porsi yang bisa dihemat" unit="0 sampai 1" step={0.05} value={form.captureRate} onChange={(v) => set("captureRate", v)} hint={formatPersen(form.captureRate)} />
+              <NumberField label="Jumlah unit di armada" value={form.fleetSize} onChange={(v) => set("fleetSize", v)} />
             </div>
             <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={useModelLife} onChange={(e) => setUseModelLife(e.target.checked)} />
-              Pakai umur ban aktual dari model §12.1 ({formatNumber(derived.modelTireLifeKm)} km)
-              <InfoTip text="What-if: ganti 'umur aktual' dengan rata-rata prediksi model M4. Tidak ikut tersimpan; default mati agar angka sanity terjaga." />
+              Pakai umur ban dari hasil perhitungan ({formatNumber(derived.modelTireLifeKm)} km)
+              <InfoTip text="Coba ganti 'umur ban sekarang' dengan rata-rata hasil perhitungan. Pilihan ini tidak ikut tersimpan, dan awalnya mati supaya angka acuan tetap." />
             </label>
           </Card>
 
           <Card>
-            <h2 className="mb-3 font-semibold text-slate-800">Inti — Platform</h2>
+            <h2 className="mb-3 font-semibold text-slate-800">Biaya platform</h2>
             <div className="grid grid-cols-2 gap-3">
-              <NumberField label="CapEx" unit="Rp" value={form.capexIdr} onChange={(v) => set("capexIdr", v)} hint={formatRupiah(form.capexIdr)} />
-              <NumberField label="OpEx / tahun" unit="Rp" value={form.opexAnnualIdr} onChange={(v) => set("opexAnnualIdr", v)} hint={formatRupiah(form.opexAnnualIdr)} />
+              <NumberField label="Biaya investasi" unit="Rp" value={form.capexIdr} onChange={(v) => set("capexIdr", v)} hint={formatRupiah(form.capexIdr)} />
+              <NumberField label="Biaya operasional per tahun" unit="Rp" value={form.opexAnnualIdr} onChange={(v) => set("opexAnnualIdr", v)} hint={formatRupiah(form.opexAnnualIdr)} />
             </div>
           </Card>
 
           <Card>
             <h2 className="mb-1 font-semibold text-slate-800">
-              Modul B — Payload
-              <InfoTip text="Lever payload. Default 0 (placeholder) — isi untuk mengaktifkan biaya underload/overload." />
+              Muatan HD785
+              <InfoTip text="Pengatur biaya muatan. Awalnya nol. Isi untuk menghitung biaya akibat muatan kurang atau muatan berlebih." />
             </h2>
-            <p className="mb-3 text-xs text-slate-400">Σ overloadRate armada = {formatNumber(derived.overloadRateSum, 2)} (dari data).</p>
+            <p className="mb-3 text-xs text-slate-400">Total tingkat muatan berlebih armada {formatNumber(derived.overloadRateSum, 2)} (dari data).</p>
             <div className="grid grid-cols-2 gap-3">
-              <NumberField label="Biaya BBM / trip" unit="Rp" value={form.fuelCostPerTripIdr} onChange={(v) => set("fuelCostPerTripIdr", v)} hint={formatRupiah(form.fuelCostPerTripIdr)} />
-              <NumberField label="Trip / tahun" value={form.tripsPerYear} onChange={(v) => set("tripsPerYear", v)} />
-              <NumberField label="Underload %" unit="0–1" step={0.01} value={form.underloadPct} onChange={(v) => set("underloadPct", v)} hint={formatPersen(form.underloadPct)} />
-              <NumberField label="Faktor keausan overload" unit="Rp" value={form.overloadWearCostFactorIdr} onChange={(v) => set("overloadWearCostFactorIdr", v)} hint={formatRupiah(form.overloadWearCostFactorIdr)} />
+              <NumberField label="Biaya BBM per ritase" unit="Rp" value={form.fuelCostPerTripIdr} onChange={(v) => set("fuelCostPerTripIdr", v)} hint={formatRupiah(form.fuelCostPerTripIdr)} />
+              <NumberField label="Ritase per tahun" value={form.tripsPerYear} onChange={(v) => set("tripsPerYear", v)} />
+              <NumberField label="Muatan kurang (%)" unit="0 sampai 1" step={0.01} value={form.underloadPct} onChange={(v) => set("underloadPct", v)} hint={formatPersen(form.underloadPct)} />
+              <NumberField label="Biaya keausan akibat muatan berlebih" unit="Rp" value={form.overloadWearCostFactorIdr} onChange={(v) => set("overloadWearCostFactorIdr", v)} hint={formatRupiah(form.overloadWearCostFactorIdr)} />
             </div>
           </Card>
         </div>
@@ -126,31 +126,31 @@ export function Finance() {
         <div className="space-y-4">
           {/* <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-emerald-100">Total penghematan / tahun</div>
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Total penghematan per tahun</div>
             <div className="mt-1 text-2xl font-bold text-white">{formatRupiah(summary.annualSavings)}</div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-emerald-100">Payback</div>
+                <div className="text-xs text-emerald-100">Balik modal</div>
                 <div className="text-lg font-semibold text-white">
-                  {Number.isFinite(summary.paybackMonths) ? `${formatNumber(summary.paybackMonths, 1)} bln` : "—"}
+                  {Number.isFinite(summary.paybackMonths) ? `${formatNumber(summary.paybackMonths, 1)} bulan` : "-"}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-emerald-100">ROI tahun-1</div>
+                <div className="text-xs text-emerald-100">Keuntungan tahun pertama</div>
                 <div className="text-lg font-semibold text-white">{formatPersen(summary.roiYear1)}</div>
               </div>
             </div>
           </div>
 
           <Card>
-            <h2 className="mb-3 font-semibold text-slate-800">Rincian (§12.7–§12.9)</h2>
+            <h2 className="mb-3 font-semibold text-slate-800">Rincian perhitungan</h2>
             <dl className="space-y-2 text-sm">
-              <ResultRow label="Ban dapat-dihindari / unit" value={`${formatNumber(tac.avoidableTires, 2)} ban`} />
-              <ResultRow label="Biaya ban terhindarkan / unit" value={formatRupiah(tac.avoidableCostPerUnit)} />
-              <ResultRow label="Tertangkap / unit" value={formatRupiah(tac.capturedPerUnit)} />
-              <ResultRow label="Biaya ban terhindarkan / armada" value={formatRupiah(summary.fleetCaptured)} strong />
-              <ResultRow label="Biaya underload / th" value={formatRupiah(summary.underloadExtraCost)} />
-              <ResultRow label="Biaya overload / th" value={formatRupiah(summary.overloadCost)} />
+              <ResultRow label="Ban yang bisa dihemat per unit" value={`${formatNumber(tac.avoidableTires, 2)} ban`} />
+              <ResultRow label="Nilai ban yang bisa dihemat per unit" value={formatRupiah(tac.avoidableCostPerUnit)} />
+              <ResultRow label="Yang realistis tertangkap per unit" value={formatRupiah(tac.capturedPerUnit)} />
+              <ResultRow label="Total penghematan ban se-armada" value={formatRupiah(summary.fleetCaptured)} strong />
+              <ResultRow label="Biaya muatan kurang per tahun" value={formatRupiah(summary.underloadExtraCost)} />
+              <ResultRow label="Biaya muatan berlebih per tahun" value={formatRupiah(summary.overloadCost)} />
             </dl>
           </Card>
         </div>
@@ -160,18 +160,18 @@ export function Finance() {
       <Card className="mt-5 overflow-hidden p-0">
         <div className="border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
-            Skenario armada
-            <InfoTip text="KPI pada beberapa ukuran armada (asumsi lain tetap)." />
+            Skenario jumlah armada
+            <InfoTip text="Hasil pada beberapa ukuran armada, dengan asumsi lain tetap sama." />
           </h2>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Armada</th>
-              <th className="px-4 py-2.5 font-medium">Biaya ban terhindarkan / th</th>
-              <th className="px-4 py-2.5 font-medium">Penghematan / th</th>
-              <th className="px-4 py-2.5 font-medium">Payback</th>
-              <th className="px-4 py-2.5 font-medium">ROI thn-1</th>
+              <th className="px-4 py-2.5 font-medium">Penghematan ban per tahun</th>
+              <th className="px-4 py-2.5 font-medium">Total penghematan per tahun</th>
+              <th className="px-4 py-2.5 font-medium">Balik modal</th>
+              <th className="px-4 py-2.5 font-medium">Untung tahun pertama</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -179,10 +179,10 @@ export function Finance() {
               const s = financialSummary({ ...effective, fleetSize: fs }, { overloadCost });
               return (
                 <tr key={fs} className={cx(fs === form.fleetSize && "bg-emerald-50/50")}>
-                  <td className="px-4 py-2.5 font-medium text-slate-700">{fs} unit{fs === form.fleetSize ? " (kini)" : ""}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-700">{fs} unit{fs === form.fleetSize ? " (saat ini)" : ""}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatRupiah(s.fleetCaptured)}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatRupiah(s.annualSavings)}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{Number.isFinite(s.paybackMonths) ? `${formatNumber(s.paybackMonths, 1)} bln` : "—"}</td>
+                  <td className="px-4 py-2.5 text-slate-600">{Number.isFinite(s.paybackMonths) ? `${formatNumber(s.paybackMonths, 1)} bulan` : "-"}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatPersen(s.roiYear1)}</td>
                 </tr>
               );

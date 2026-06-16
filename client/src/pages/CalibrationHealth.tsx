@@ -12,8 +12,8 @@ export function CalibrationHealth() {
   return (
     <>
       <PageHeader
-        title="Calibration Health"
-        subtitle="Status drift kalibrasi Payload Meter (PLM) HD785 — perlu kalibrasi bila |offset| > 5% atau usia > 90 hari."
+        title="Kesehatan Kalibrasi"
+        subtitle="Status kalibrasi timbangan muatan di HD785. Sebuah timbangan perlu dikalibrasi ulang kalau selisihnya lebih dari 5 persen, atau sudah lebih dari 90 hari sejak kalibrasi terakhir."
         actions={
           data ? (
             <ExportButton
@@ -32,8 +32,8 @@ export function CalibrationHealth() {
         <>
           <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Stat label="Total HD785" value={formatNumber(data.length)} />
-            <Stat label="Perlu kalibrasi" value={<span className="text-red-600">{needs}</span>} hint="offset/usia di luar ambang" />
-            <Stat label="Terkalibrasi baik" value={<span className="text-emerald-600">{data.length - needs}</span>} />
+            <Stat label="Perlu dikalibrasi" value={<span className="text-red-600">{needs}</span>} hint="selisih atau usianya di luar batas aman" />
+            <Stat label="Kalibrasi masih baik" value={<span className="text-emerald-600">{data.length - needs}</span>} />
           </div>
 
           <CalibrationForm unitIds={unitIds} />
@@ -45,8 +45,8 @@ export function CalibrationHealth() {
                   <th className="px-4 py-3 font-medium">Unit</th>
                   <th className="px-4 py-3 font-medium">Kalibrasi terakhir</th>
                   <th className="px-4 py-3 font-medium">
-                    Offset skala
-                    <InfoTip text="Selisih sistematis timbangan dari studi (scale study). Ambang |offset| > 5%." />
+                    Selisih timbangan
+                    <InfoTip text="Selisih hasil timbangan dari nilai yang sebenarnya. Lebih dari 5 persen dianggap perlu dikalibrasi." />
                   </th>
                   <th className="px-4 py-3 font-medium">Usia</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -110,9 +110,9 @@ function CalibrationForm({ unitIds }: { unitIds: string[] }) {
     <Card className="mb-5">
       <h2 className="mb-1 font-semibold text-slate-800">
         Catat kalibrasi baru
-        <InfoTip text="Mencatat kalibrasi ulang PLM HD785: unit, tanggal kalibrasi, dan offset skala (%) dari studi. Status drift dihitung ulang otomatis." />
+        <InfoTip text="Catat kalibrasi ulang timbangan HD785. Pilih unit, tanggal kalibrasi, dan selisih timbangannya. Statusnya langsung dihitung ulang." />
       </h2>
-      <p className="mb-3 text-xs text-slate-400">Hanya unit HD785 (pit_dumper). Data contoh/manual — bukan feed timbangan live.</p>
+      <p className="mb-3 text-xs text-slate-400">Hanya untuk unit HD785. Data dimasukkan manual, bukan dari timbangan langsung.</p>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">Unit (HD785)</span>
@@ -142,7 +142,7 @@ function CalibrationForm({ unitIds }: { unitIds: string[] }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs text-slate-500">Offset skala (%)</span>
+          <span className="mb-1 block text-xs text-slate-500">Selisih timbangan (%)</span>
           <input
             type="number"
             step="0.1"

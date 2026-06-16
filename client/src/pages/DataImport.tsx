@@ -11,11 +11,11 @@ interface EntityDef {
 }
 
 const ENTITIES: EntityDef[] = [
-  { key: "units", label: "Unit (truk & HD785)", headers: ["id", "category", "model", "tareKg", "ratedPayloadKg", "tiresCount", "tireModel", "tirePriceIdr", "kmPerYear"] },
+  { key: "units", label: "Unit (truk dan HD785)", headers: ["id", "category", "model", "tareKg", "ratedPayloadKg", "tiresCount", "tireModel", "tirePriceIdr", "kmPerYear"] },
   { key: "operators", label: "Operator", headers: ["id", "name", "shift"] },
-  { key: "segments", label: "Segmen jalan", headers: ["id", "name", "surface", "lengthKm", "conditionScore", "avgSpeedLoadedKmh", "avgSpeedEmptyKmh"] },
+  { key: "segments", label: "Ruas jalan", headers: ["id", "name", "surface", "lengthKm", "conditionScore", "avgSpeedLoadedKmh", "avgSpeedEmptyKmh"] },
   { key: "tires", label: "Ban (truk hauling)", headers: ["id", "unitId", "position", "installDate", "removalDate", "kmAtRemoval", "avgPressureDeviationPct", "loadIndex", "removalReason", "costIdr"] },
-  { key: "payload", label: "Payload (HD785)", headers: ["id", "unitId", "operatorId", "timestamp", "measuredPayloadKg", "targetPayloadKg"] },
+  { key: "payload", label: "Muatan (HD785)", headers: ["id", "unitId", "operatorId", "timestamp", "measuredPayloadKg", "targetPayloadKg"] },
   { key: "calibration", label: "Kalibrasi (HD785)", headers: ["id", "unitId", "lastCalibrationDate", "scaleStudyOffsetPct"] },
 ];
 
@@ -36,16 +36,16 @@ export function DataImport() {
   return (
     <>
       <PageHeader
-        title="Data / Import"
-        subtitle="Unggah CSV/XLSX untuk memperbarui data (upsert berdasarkan id). Tegakkan pemetaan unit (ban=truk jalan, payload=HD785)."
+        title="Data dan Impor"
+        subtitle="Unggah file CSV atau Excel untuk memperbarui data. Baris dengan id yang sama akan ditimpa. Ban hanya untuk truk hauling, muatan hanya untuk HD785."
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Impor */}
         <Card>
           <h2 className="mb-3 font-semibold text-slate-800">
-            Impor berkas
-            <InfoTip text="Validasi per-baris (SR-V2): baris rusak dilaporkan, baris valid tetap disimpan. Unit salah-modul ditolak (SR-V3)." />
+            Impor file
+            <InfoTip text="Tiap baris diperiksa satu per satu. Baris yang rusak dilaporkan, baris yang benar tetap disimpan. Unit yang salah jenis akan ditolak." />
           </h2>
 
           <label className="mb-1 block text-xs text-slate-500">Jenis data</label>
@@ -73,7 +73,7 @@ export function DataImport() {
                 onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
                 className="hidden"
               />
-              {fileName || "Pilih berkas .csv / .xlsx…"}
+              {fileName || "Pilih file .csv atau .xlsx"}
             </label>
             <button
               onClick={onUpload}
@@ -126,9 +126,9 @@ export function DataImport() {
 
         {/* Petunjuk */}
         <Card>
-          <h2 className="mb-3 font-semibold text-slate-800">Kolom & contoh</h2>
+          <h2 className="mb-3 font-semibold text-slate-800">Kolom dan contoh</h2>
           <p className="mb-2 text-sm text-slate-600">
-            Kolom <span className="font-medium">{current.label}</span>:
+            Kolom untuk <span className="font-medium">{current.label}</span>
           </p>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {current.headers.map((h) => (
@@ -138,16 +138,16 @@ export function DataImport() {
             ))}
           </div>
           <ul className="list-disc space-y-1 pl-5 text-xs text-slate-500">
-            <li>Contoh siap-pakai di <span className="font-mono">server/sample-data/*.csv</span>.</li>
-            <li>Impor ulang dengan <span className="font-mono">id</span> sama akan menimpa (upsert).</li>
-            <li>Status payload &amp; status kalibrasi dihitung otomatis dari data.</li>
-            <li>Impor ban menolak <span className="font-mono">unitId</span> HD785; impor payload menolak unit truk jalan (SR-V3).</li>
+            <li>Contoh file siap pakai ada di <span className="font-mono">server/sample-data/*.csv</span>.</li>
+            <li>Mengimpor ulang dengan <span className="font-mono">id</span> yang sama akan menimpa data lama.</li>
+            <li>Status muatan dan status kalibrasi dihitung otomatis dari data.</li>
+            <li>Impor ban menolak unit HD785. Impor muatan menolak unit truk hauling.</li>
           </ul>
         </Card>
       </div>
 
       {/* Inventory */}
-      <h2 className="mb-3 mt-6 font-semibold text-slate-800">Inventaris saat ini</h2>
+      <h2 className="mb-3 mt-6 font-semibold text-slate-800">Data saat ini</h2>
       {inv.isLoading && <Loading />}
       {inv.error && <ErrorState message={(inv.error as Error).message} onRetry={() => void inv.refetch()} />}
       {inv.data && (
@@ -155,7 +155,7 @@ export function DataImport() {
           <div className="mb-4 grid grid-cols-3 gap-4">
             <Stat label="Unit" value={formatNumber(inv.data.counts.units)} />
             <Stat label="Operator" value={formatNumber(inv.data.counts.operators)} />
-            <Stat label="Segmen jalan" value={formatNumber(inv.data.counts.segments)} />
+            <Stat label="Ruas jalan" value={formatNumber(inv.data.counts.segments)} />
           </div>
 
           <Card className="overflow-hidden p-0">
@@ -169,7 +169,7 @@ export function DataImport() {
                     <th className="px-4 py-2 font-medium">ID</th>
                     <th className="px-4 py-2 font-medium">Kategori</th>
                     <th className="px-4 py-2 font-medium">Model</th>
-                    <th className="px-4 py-2 font-medium">Rated payload</th>
+                    <th className="px-4 py-2 font-medium">Kapasitas muatan</th>
                     <th className="px-4 py-2 font-medium">Ban</th>
                   </tr>
                 </thead>

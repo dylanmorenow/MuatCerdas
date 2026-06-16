@@ -6,7 +6,7 @@ import type { FactorContribution } from "../api/tires";
 export function FactorBarChart({ contributions }: { contributions: FactorContribution[] }) {
   const data = contributions.filter((c) => Math.abs(c.contribution) >= 1);
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">Tidak ada shortfall berarti — unit mendekati best-practice.</p>;
+    return <p className="text-sm text-slate-500">Tidak ada kekurangan umur yang berarti. Unit ini sudah mendekati kondisi ideal.</p>;
   }
   return (
     <div style={{ width: "100%", height: Math.max(150, data.length * 46) }}>

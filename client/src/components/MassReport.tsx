@@ -23,7 +23,7 @@ export function OfflineToggle() {
           "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
           offline ? "bg-slate-200 text-slate-600" : "bg-emerald-100 text-emerald-700",
         )}
-        title={offline ? "Mode offline (simulasi) — klik untuk online & kirim antrean" : "Online — klik untuk simulasi offline"}
+        title={offline ? "Sedang offline (simulasi). Klik untuk kembali online dan mengirim antrean." : "Sedang online. Klik untuk simulasi offline."}
       >
         <span className={cx("h-2 w-2 rounded-full", offline ? "bg-slate-400" : "bg-emerald-500")} />
         {offline ? "Offline (simulasi)" : "Online"}
@@ -85,7 +85,7 @@ export function MassReportForm({
     } else if (r.error) {
       setMsg({ tone: "err", text: r.error });
     } else {
-      setMsg({ tone: "queued", text: "Disimpan offline — terkirim otomatis saat online" });
+      setMsg({ tone: "queued", text: "Disimpan dulu. Akan terkirim otomatis saat kembali online." });
       reset();
     }
   };
@@ -189,7 +189,7 @@ export function MassReportForm({
         </div>
       </form>
       <p className="mt-2 text-[11px] text-slate-400">
-        Data dikirim ke Mass Monitoring surveyor. Antrean offline = simulasi sinyal lemah (bukan deteksi jaringan nyata).
+        Data dikirim ke halaman Pemantauan Muatan milik surveyor. Mode offline hanya simulasi sinyal lemah, bukan deteksi jaringan asli.
       </p>
     </div>
   );

@@ -23,9 +23,9 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
     const actual = Math.round(vmaxKmh * (1.05 + Math.random() * 0.18));
     if (actual > vmaxKmh) {
       const atKm = Number((2 + Math.random() * 31).toFixed(1));
-      const detail = `Aktual ~${actual} km/jam > Vmax aman ${Math.round(vmaxKmh)} km/jam`;
+      const detail = `Kecepatan sekitar ${actual} km/jam, di atas batas aman ${Math.round(vmaxKmh)} km/jam`;
       const r = await enqueue("/api/driver/event", { unitId, type: "overspeed", detail, atKm, source: "sim" });
-      msgs.push(`${r.sent ? "Terkirim" : "Antre"}: overspeed — ${detail}`);
+      msgs.push(`${r.sent ? "Terkirim" : "Antre"} (ngebut): ${detail}`);
     }
 
     // 2) Hazard: melewati salah satu bahaya pada peta LiDAR.
@@ -41,7 +41,7 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
         hazardType: h.type,
         source: "sim",
       });
-      msgs.push(`${r.sent ? "Terkirim" : "Antre"}: hazard — ${detail}`);
+      msgs.push(`${r.sent ? "Terkirim" : "Antre"} (bahaya): ${detail}`);
     }
 
     setLog((prev) => [...msgs, ...prev].slice(0, 4));
@@ -63,8 +63,8 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
         </button>
       </div>
       <p className="text-[11px] text-slate-400">
-        Mendeteksi overspeed (vs Vmax aman) &amp; bahaya yang dilewati → dikirim ke surveyor (rekomendasi Modul A).
-        Simulasi — bukan perangkat live di kabin.
+        Mendeteksi saat ngebut (di atas batas aman) dan bahaya yang dilewati, lalu mengirimnya ke surveyor untuk jadi
+        bahan rekomendasi ban. Ini simulasi, bukan alat asli di kabin.
       </p>
       {log.length > 0 && (
         <ul className="mt-3 space-y-1 text-xs text-slate-600">

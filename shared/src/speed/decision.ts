@@ -96,7 +96,7 @@ export function decideSpeed(input: SpeedDecisionInput): SpeedDecision {
       options.push({
         kind: "add_units",
         basis: "work",
-        label: `Tambah ${extra} unit (total ${needed}) agar kecepatan turun ke batas aman`,
+        label: `Tambah ${extra} unit (jadi total ${needed}) supaya kecepatan turun ke batas aman`,
         value: extra,
         unit: "unit",
       });
@@ -109,7 +109,7 @@ export function decideSpeed(input: SpeedDecisionInput): SpeedDecision {
     options.push({
       kind: "lower_target",
       basis: "work",
-      label: `Turunkan target ke ${safeTargetTon.toLocaleString("id-ID")} t/hari (dari ${ctx.dailyTargetTon.toLocaleString("id-ID")})`,
+      label: `Turunkan target jadi ${safeTargetTon.toLocaleString("id-ID")} ton/hari (dari ${ctx.dailyTargetTon.toLocaleString("id-ID")})`,
       value: safeTargetTon,
       unit: "t/hari",
     });
@@ -125,7 +125,7 @@ export function decideSpeed(input: SpeedDecisionInput): SpeedDecision {
       options.push({
         kind: "reduce_overload",
         basis: "work",
-        label: `Batasi muatan ke ${maxPayloadT.toFixed(1)} t (−${reduceT.toFixed(1)} t dari ${currentPayloadT.toFixed(1)} t)`,
+        label: `Batasi muatan jadi ${maxPayloadT.toFixed(1)} t (kurangi ${reduceT.toFixed(1)} t dari ${currentPayloadT.toFixed(1)} t)`,
         value: Number(maxPayloadT.toFixed(1)),
         unit: "t",
       });
@@ -143,7 +143,7 @@ export function decideSpeed(input: SpeedDecisionInput): SpeedDecision {
       options.push({
         kind: "reduce_fixed_time",
         basis: "travel",
-        label: `Pangkas waktu tetap ${reduceMin.toFixed(0)} mnt/siklus (perbaiki jalan/antrian) agar kecepatan travel layak`,
+        label: `Pangkas waktu diam ${reduceMin.toFixed(0)} menit per siklus (perbaiki jalan atau antrean) supaya kecepatan saat jalan masuk akal`,
         value: Number(maxFixedTimeH.toFixed(2)),
         unit: "jam",
       });

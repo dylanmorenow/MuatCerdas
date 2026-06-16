@@ -432,20 +432,20 @@ export async function getTireUnitDetail(unitId: string): Promise<TireUnitDetail 
 
 const FACTOR_ACTION: Record<string, { action: string; reason: string }> = {
   "Tekanan ban": {
-    action: "Koreksi tekanan ban ke spesifikasi",
-    reason: "Deviasi tekanan tinggi mempercepat keausan",
+    action: "Setel ulang tekanan ban sesuai standar",
+    reason: "Tekanan yang melenceng jauh mempercepat keausan ban",
   },
   "Kondisi jalan": {
-    action: "Rawat segmen laterit kritis & rotasi ban",
-    reason: "Eksposur jalan buruk mendominasi keausan",
+    action: "Perbaiki ruas laterit yang rusak dan rotasi ban",
+    reason: "Jalan yang buruk jadi penyebab utama keausan",
   },
   Muatan: {
-    action: "Audit & batasi muatan berlebih",
-    reason: "Indeks muatan tinggi memperpendek umur ban",
+    action: "Periksa dan batasi muatan berlebih",
+    reason: "Muatan yang terlalu berat memperpendek umur ban",
   },
   Operator: {
-    action: "Coaching gaya berkendara operator",
-    reason: "Pola operator agresif mempercepat keausan",
+    action: "Beri arahan soal gaya berkendara ke operator",
+    reason: "Gaya berkendara yang agresif mempercepat keausan",
   },
 };
 
@@ -511,9 +511,9 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
       recs.push({
         unitId: u.id,
         model: u.model,
-        action: "Coaching kecepatan — kurangi overspeed (jaga ≤ Vmax aman)",
-        reason: `${ev.overspeedCount}× overspeed terdeteksi (Modul C) — memanaskan ban (TKPH) → umur turun`,
-        factor: "Overspeed (driver)",
+        action: "Beri arahan ke driver supaya tidak ngebut, jaga di bawah batas aman",
+        reason: `Terdeteksi ngebut ${ev.overspeedCount} kali. Ban jadi panas dan umurnya turun.`,
+        factor: "Driver ngebut",
         estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.overspeedCount * 0.05)),
         priority: 60 + ev.overspeedCount,
       });
@@ -523,9 +523,9 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
       recs.push({
         unitId: u.id,
         model: u.model,
-        action: "Hindari/perbaiki segmen rawan bahaya yang dilewati",
-        reason: `${ev.hazardCount}× melewati zona bahaya${types ? ` (${types})` : ""} — percepat keausan/cut ban`,
-        factor: "Zona bahaya (driver)",
+        action: "Hindari atau perbaiki ruas jalan berbahaya yang sering dilewati",
+        reason: `Melewati zona bahaya ${ev.hazardCount} kali${types ? ` (${types})` : ""}. Mempercepat keausan dan risiko ban sobek.`,
+        factor: "Lewat zona bahaya",
         estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.hazardCount * 0.04)),
         priority: 55 + ev.hazardCount,
       });

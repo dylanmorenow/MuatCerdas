@@ -109,11 +109,11 @@ function catalogFor(catalog: Map<string, number>, tireModel: string | null): num
 }
 
 function reasonText(payloadT: number, targetT: number, vTravel: number): string {
-  const v = Number.isFinite(vTravel) ? `${roundKmh(vTravel)} km/jam` : "—";
+  const v = Number.isFinite(vTravel) ? `${roundKmh(vTravel)} km/jam` : "-";
   if (payloadT > targetT) {
-    return `muatan ${round1(payloadT)} t > target ${round1(targetT)} t → maks ${v}`;
+    return `muatan ${round1(payloadT)} t lebih dari target ${round1(targetT)} t, jadi kecepatan maksimum ${v}`;
   }
-  return `muatan ${round1(payloadT)} t (≤ target ${round1(targetT)} t) → maks ${v}`;
+  return `muatan ${round1(payloadT)} t masih di bawah target ${round1(targetT)} t, jadi kecepatan maksimum ${v}`;
 }
 
 /** Baris kecepatan satu unit (haul) — basis work untuk keputusan, travel untuk driver. */

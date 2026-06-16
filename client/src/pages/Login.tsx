@@ -25,7 +25,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <form onSubmit={submit} className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="text-xl font-bold text-kpp-green">MuatCerdas</div>
-        <div className="mb-5 text-sm text-slate-500">Tire &amp; Payload Intelligence — KPP</div>
+        <div className="mb-5 text-sm text-slate-500">Cerdas kelola ban dan muatan, KPP Mining</div>
 
         <label className="mb-3 block">
           <span className="mb-1 block text-xs text-slate-500">Username</span>
@@ -57,9 +57,9 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
         </button>
 
         <div className="mt-4 rounded-md bg-slate-50 p-2 text-[11px] text-slate-500">
-          <div className="font-medium text-slate-600">Akun demo:</div>
-          <div>admin — <span className="font-mono">kpp / muatcerdas</span></div>
-          <div>driver — <span className="font-mono">andi / andi123</span> (HD-01) · <span className="font-mono">budi / budi123</span> (HT-01)</div>
+          <div className="font-medium text-slate-600">Akun demo</div>
+          <div>Admin: <span className="font-mono">kpp / muatcerdas</span></div>
+          <div>Driver: <span className="font-mono">andi / andi123</span> (HD-01) atau <span className="font-mono">budi / budi123</span> (HT-01)</div>
         </div>
       </form>
     </div>

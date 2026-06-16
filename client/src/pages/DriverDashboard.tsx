@@ -12,7 +12,7 @@ import { DriverTripSim } from "../components/DriverTripSim";
 const PAYLOAD_TONE: Record<string, { bg: string; label: string }> = {
   under: { bg: "bg-amber-500", label: "KURANG" },
   ok: { bg: "bg-emerald-600", label: "PAS" },
-  over: { bg: "bg-red-600", label: "OVERLOAD" },
+  over: { bg: "bg-red-600", label: "BERLEBIH" },
 };
 const TIRE_TONE: Record<string, { bg: string; label: string }> = {
   ok: { bg: "bg-emerald-600", label: "SEHAT" },
@@ -32,10 +32,10 @@ export function DriverDashboard() {
     <div className="min-h-screen bg-slate-100">
       <header className="flex items-center justify-between bg-kpp-green px-5 py-3 text-white">
         <div>
-          <div className="text-base font-bold">MuatCerdas — Driver</div>
+          <div className="text-base font-bold">MuatCerdas untuk Driver</div>
           {data && (
             <div className="text-xs text-white/80">
-              {data.identity.name ?? "—"} · Unit {data.unit.id} ({data.unit.model}) · shift {data.identity.shift ?? "—"}
+              {data.identity.name ?? "-"} · Unit {data.unit.id} ({data.unit.model}) · shift {data.identity.shift ?? "-"}
             </div>
           )}
         </div>
@@ -54,10 +54,10 @@ export function DriverDashboard() {
             <div className={cx("rounded-2xl p-6 text-white", data.speed?.overTarget ? "bg-red-600" : "bg-kpp-blue")}>
               <div className="text-sm uppercase tracking-wide text-white/80">Kecepatan maksimum aman</div>
               <div className="mt-1 text-6xl font-extrabold">
-                {data.speed ? formatNumber(data.speed.vmaxSafeTravelKmh, 1) : "—"}
+                {data.speed ? formatNumber(data.speed.vmaxSafeTravelKmh, 1) : "-"}
                 <span className="ml-2 text-2xl font-semibold">km/jam</span>
               </div>
-              <div className="mt-2 text-sm text-white/90">{data.speed?.reason ?? "data kecepatan tak tersedia"}</div>
+              <div className="mt-2 text-sm text-white/90">{data.speed?.reason ?? "data kecepatan belum tersedia"}</div>
             </div>
 
             {/* Massa muatan (HD785) atau Kondisi ban (haul) */}
@@ -67,7 +67,7 @@ export function DriverDashboard() {
                   title="Massa muatan"
                   tone={PAYLOAD_TONE[data.payload.status]?.bg ?? "bg-slate-500"}
                   big={`${formatNumber(data.payload.meanKg / 1000, 1)} t`}
-                  sub={`target ${formatNumber(data.payload.targetKg / 1000, 0)} t · ${PAYLOAD_TONE[data.payload.status]?.label ?? data.payload.status}`}
+                  sub={`target ${formatNumber(data.payload.targetKg / 1000, 0)} t, ${PAYLOAD_TONE[data.payload.status]?.label ?? data.payload.status}`}
                 />
               )}
               {data.tire && (
@@ -75,21 +75,21 @@ export function DriverDashboard() {
                   title="Kondisi ban"
                   tone={TIRE_TONE[data.tire.status]?.bg ?? "bg-slate-500"}
                   big={TIRE_TONE[data.tire.status]?.label ?? data.tire.status}
-                  sub={`sisa umur ${formatNumber(data.tire.remainingLifeKm)} km`}
+                  sub={`sisa umur sekitar ${formatNumber(data.tire.remainingLifeKm)} km`}
                 />
               )}
               <BigIndicator
                 title="Target produksi hari ini"
                 tone="bg-slate-700"
                 big={`${formatNumber(data.production.dailyTargetTon)} t`}
-                sub={`bagian unit ±${formatNumber(data.production.unitShareTon)} t · ${formatNumber(data.production.perTripPayloadT, 1)} t / rit`}
+                sub={`bagian unit ini sekitar ${formatNumber(data.production.unitShareTon)} t, atau ${formatNumber(data.production.perTripPayloadT, 1)} t per ritase`}
               />
               {data.calibration && (
                 <BigIndicator
                   title="Kalibrasi timbangan"
                   tone={data.calibration.needsCalibration ? "bg-red-600" : "bg-emerald-600"}
                   big={data.calibration.needsCalibration ? "PERLU KALIBRASI" : "OK"}
-                  sub={`offset ${formatNumber(data.calibration.scaleStudyOffsetPct)}% · usia ${formatNumber(data.calibration.ageDays)} hari`}
+                  sub={`selisih ${formatNumber(data.calibration.scaleStudyOffsetPct)}%, usia ${formatNumber(data.calibration.ageDays)} hari`}
                 />
               )}
             </div>
@@ -107,8 +107,8 @@ export function DriverDashboard() {
             {/* Peta bahaya jalan LiDAR */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-semibold text-slate-800">Bahaya jalan KM33 → Jetty (LiDAR)</h2>
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe · data simulasi</span>
+                <h2 className="font-semibold text-slate-800">Bahaya jalan KM 33 ke Jetty (LiDAR)</h2>
+                <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe, data simulasi</span>
               </div>
               {roadMap ? (
                 <HazardMap data={roadMap} />
