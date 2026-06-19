@@ -8,6 +8,8 @@ export * from "./roadmap";
 export * from "./ops";
 export * from "./mass";
 export * from "./hazard";
+export * from "./grading";
+export * from "./roadcondition";
 
 // Engine domain (PRD §12) — dibangun di M2.
 export * from "./tire/predict"; // §12.1

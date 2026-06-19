@@ -23,6 +23,7 @@ model Unit {
   tirePriceIdr   Float?
   kmPerYear      Float?
   material       String? // HD785: "coal" | "overburden" (Modul B/Dashboard quota); null utk haul
+  zone           String? // zona operasi truk hauling (ADMIN-8): "cpp" | "tengah" | "jetty"
 
   tireRecords   TireRecord[]
   tripLogs      TripLog[]
@@ -216,17 +217,19 @@ model MassInput {
   @@index([timestamp])
 }
 
-// Revisi F3 — bahaya jalan dari "device LiDAR" (SIMULASI; truk pemeta = hauling lead/last).
-// conditionScore segmen diturunkan dari kumpulan bahaya ini (shared/hazard.ts) → menyetir Modul A/C.
-// Batas integrasi: adaptor roadMapSource dapat menyambung feed LiDAR nyata tanpa ubah domain.
+// Revisi F3 + akhir — bahaya jalan dari "kamera berbasis AI" (SIMULASI; truk pemeta = hauling
+// lead/last). conditionScore segmen diturunkan dari kumpulan bahaya ini (shared/hazard.ts) →
+// menyetir Modul A/C. Batas integrasi: adaptor roadMapSource bisa menyambung feed kamera nyata.
 model RoadHazard {
   id         String   @id @default(cuid())
   type       String // pothole|rutting|washboard|sharp_rock|spillage|standing_water|mud|edge_break
   segmentId  String
   positionKm Float // posisi sepanjang rute CPP KM33 → Jetty (0..~35)
   severity   Float // 0..1
+  coveragePct Float  @default(0) // perkiraan lebar jalan yang tertutup bahaya (0..1)
+  urgent     Boolean @default(false) // perlu tindakan segera (menutupi jalan / tak terhindarkan)
   detectedAt DateTime @default(now())
-  source     String   @default("lidar_sim")
+  source     String   @default("camera_ai")
 
   segment RoadSegment @relation(fields: [segmentId], references: [id])
 
@@ -238,7 +241,7 @@ model RoadHazard {
 model DriverEvent {
   id        String   @id @default(cuid())
   unitId    String
-  type      String // "overspeed" | "hazard"
+  type      String // "overspeed" | "hazard" | "hard_braking"
   detail    String
   atKm      Float?
   hazardType String?
@@ -249,4 +252,33 @@ model DriverEvent {
 
   @@index([unitId])
   @@index([timestamp])
+}
+
+// Revisi akhir (OPERATOR-2) — katalog operator excavator (nama + tipe) untuk dropdown laporan
+// HD785. Bisa ditambah operator/anggota baru; tersimpan dan otomatis muncul di pilihan berikutnya.
+model ExcavatorOperator {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  excavatorType String // "PC2000" | "PC1250" | "PC850" | dst
+}
+
+// Revisi akhir (ADMIN-5) — tindakan yang sudah diselesaikan (ganti ban, rekomendasi, kalibrasi).
+// Item yang ditandai selesai dikecualikan dari daftar & total biaya/kerugian. Tersimpan permanen.
+model ResolvedAction {
+  id         String   @id @default(cuid())
+  unitId     String
+  actionType String // "tire_replace" | "recommendation" | "calibration"
+  refKey     String // kunci unik tindakan (mis. unitId+factor) agar idempoten
+  detail     String?
+  resolvedAt DateTime @default(now())
+
+  @@unique([actionType, refKey])
+  @@index([unitId])
+}
+
+// Revisi akhir (ADMIN-8) — kondisi jalan per zona operasi. Memengaruhi kecepatan aman unit di
+// zona itu (selain muatan). Settings: satu baris per zona.
+model ZoneCondition {
+  zone      String @id // "cpp" | "tengah" | "jetty"
+  condition String // "normal" | "dusty" | "wet" | "muddy" | "slippery"
 }

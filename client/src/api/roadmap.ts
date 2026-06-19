@@ -19,6 +19,8 @@ export interface RoadMapHazard {
   segmentId: string;
   positionKm: number;
   severity: number;
+  coveragePct: number;
+  urgent: boolean;
 }
 export interface RoadMapData {
   segments: RoadMapSegment[];

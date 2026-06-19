@@ -107,7 +107,7 @@ export function DriverDashboard() {
             {/* Peta bahaya jalan LiDAR */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-semibold text-slate-800">Bahaya jalan KM 33 ke Jetty (LiDAR)</h2>
+                <h2 className="font-semibold text-slate-800">Bahaya jalan KM 33 ke Jetty (kamera AI)</h2>
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe, data simulasi</span>
               </div>
               {roadMap ? (

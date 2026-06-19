@@ -58,10 +58,11 @@ export function HazardMap({ data }: { data: RoadMapData }) {
   const counts = new Map<HazardType, number>();
   for (const h of hazards) counts.set(h.type, (counts.get(h.type) ?? 0) + 1);
   const legend = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const urgentCount = hazards.filter((h) => h.urgent).length;
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${totalH}`} className="w-full" role="img" aria-label="Peta bahaya jalan LiDAR KM33 → Jetty">
+      <svg viewBox={`0 0 ${W} ${totalH}`} className="w-full" role="img" aria-label="Peta bahaya jalan kamera AI KM33 ke Jetty">
         <text x={PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155">KM 33 (CPP)</text>
         <text x={W - PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155" textAnchor="end">Jetty · PT Indexim Coalindo</text>
 
@@ -74,7 +75,7 @@ export function HazardMap({ data }: { data: RoadMapData }) {
         )}
         {mappers.leadUnitId && (
           <g>
-            <text x={W - PAD - 16} y={Y_MAPPER} fontSize="9" fill="#0E4D92" textAnchor="end">Pemeta depan (LiDAR) · {mappers.leadUnitId}</text>
+            <text x={W - PAD - 16} y={Y_MAPPER} fontSize="9" fill="#0E4D92" textAnchor="end">Pemeta depan (kamera AI) · {mappers.leadUnitId}</text>
             <rect x={W - PAD - 12} y={Y_MAPPER - 7} width="12" height="6" rx="1.5" fill="#0E4D92" />
           </g>
         )}
@@ -88,16 +89,33 @@ export function HazardMap({ data }: { data: RoadMapData }) {
           </g>
         ))}
 
-        {/* penanda bahaya: stalk tipis ke strip + bulatan berwarna */}
+        {/* penanda bahaya: stalk tipis ke strip + bulatan (biasa) atau segitiga (mendesak) */}
         {placed.map((m) => {
           const my = LANE_TOP + m.lane * LANE_STEP;
           const r = 3.4 + m.severity * 1.4;
+          const title = (
+            <title>
+              {hazardLabel(m.type)} · KM {m.positionKm.toFixed(1)} · tingkat keparahan {(m.severity * 100).toFixed(0)}%
+              {m.urgent ? " · perlu tindakan segera" : ""}
+            </title>
+          );
           return (
             <g key={m.id}>
               <line x1={m.x} y1={my} x2={m.x} y2={stripY} stroke="#e2e8f0" strokeWidth="0.8" />
-              <circle cx={m.x} cy={my} r={r} fill={hazardColor(m.type)} stroke="#fff" strokeWidth="1.3">
-                <title>{hazardLabel(m.type)} · KM {m.positionKm.toFixed(1)} · severity {(m.severity * 100).toFixed(0)}%</title>
-              </circle>
+              {m.urgent ? (
+                <polygon
+                  points={`${m.x},${my - r - 1.5} ${m.x - r - 1},${my + r} ${m.x + r + 1},${my + r}`}
+                  fill={hazardColor(m.type)}
+                  stroke="#7f1d1d"
+                  strokeWidth="1.4"
+                >
+                  {title}
+                </polygon>
+              ) : (
+                <circle cx={m.x} cy={my} r={r} fill={hazardColor(m.type)} stroke="#fff" strokeWidth="1.3">
+                  {title}
+                </circle>
+              )}
             </g>
           );
         })}
@@ -111,6 +129,12 @@ export function HazardMap({ data }: { data: RoadMapData }) {
             {hazardLabel(type)} <span className="text-slate-400">({n})</span>
           </span>
         ))}
+      </div>
+      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <polygon points="6,1 11,11 1,11" fill="#94a3b8" stroke="#7f1d1d" strokeWidth="1" />
+        </svg>
+        Bentuk segitiga = perlu tindakan segera <span className="text-slate-400">({urgentCount})</span>
       </div>
     </div>
   );

@@ -47,6 +47,19 @@ const OPERATOR_NAMES = [
   "Dedi Kurniawan", "Joko Susilo", "Rudi Hartono", "Bambang Setiawan",
 ] as const;
 
+// Zona operasi truk hauling (ADMIN-8): dekat CPP, tengah, dekat Jetty.
+const ZONES = ["cpp", "tengah", "jetty"] as const;
+
+// Katalog operator excavator (OPERATOR-2): nama + tipe excavator. Dipakai dropdown laporan HD785.
+const EXCAVATOR_OPERATORS_SEED = [
+  { name: "Yusuf", excavatorType: "PC2000" },
+  { name: "Hendra", excavatorType: "PC2000" },
+  { name: "Joko", excavatorType: "PC1250" },
+  { name: "Rahmat", excavatorType: "PC1250" },
+  { name: "Slamet", excavatorType: "PC850" },
+  { name: "Wawan", excavatorType: "PC850" },
+];
+
 // Rute CPP KM33 → Jetty (~35 km), mayoritas laterit.
 const SEGMENTS = [
   { id: "SEG-1", name: "CPP KM33 – Simpang", surface: "laterite", lengthKm: 8, conditionScore: 0.45, loaded: 25, empty: 40 },
@@ -125,6 +138,9 @@ async function resetTables(): Promise<void> {
   await prisma.massInput.deleteMany();
   await prisma.driverEvent.deleteMany();
   await prisma.roadHazard.deleteMany();
+  await prisma.resolvedAction.deleteMany();
+  await prisma.excavatorOperator.deleteMany();
+  await prisma.zoneCondition.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.operator.deleteMany();
   await prisma.roadSegment.deleteMany();
@@ -184,6 +200,10 @@ async function main(): Promise<void> {
     while (sum < targetSum && n < 14) {
       const type = rng.pick(pool);
       const severity = Number(clamp(rng.gaussian(0.7, 0.15), 0.3, 1).toFixed(2));
+      // Perkiraan lebar jalan yang tertutup bahaya (0..1). Mendesak bila parah & menutupi
+      // sebagian besar jalan → perlu tindakan segera (ADMIN-2).
+      const coveragePct = Number(clamp(rng.gaussian(0.4, 0.22), 0.05, 1).toFixed(2));
+      const urgent = severity >= 0.8 && coveragePct >= 0.6;
       segHazards.push({ type, segmentId: s.id, severity });
       hazardRows.push({
         id: `HZ-${s.id}-${String(n + 1).padStart(2, "0")}`,
@@ -191,8 +211,10 @@ async function main(): Promise<void> {
         segmentId: s.id,
         positionKm: Number((segStartKm + rng.range(0.3, s.lengthKm - 0.3)).toFixed(1)),
         severity,
+        coveragePct,
+        urgent,
         detectedAt: daysBefore(SEED_TODAY, rng.int(0, 6)),
-        source: "lidar_sim",
+        source: "camera_ai",
       });
       sum += hazardSeverityWeight(type) * severity;
       n++;
@@ -260,6 +282,7 @@ async function main(): Promise<void> {
       tireModel: model.tireModel,
       tirePriceIdr,
       kmPerYear: 100_000,
+      zone: ZONES[i % ZONES.length], // bagi merata ke 3 zona operasi (ADMIN-8)
     });
   }
 
@@ -396,14 +419,7 @@ async function main(): Promise<void> {
   //   SUMBER = input operator (disimulasikan). HD785: massa + material + nama operator excavator.
   //   Truk hauling: massa per 2 bucket (batubara).
   const NOW = new Date();
-  const EXCAVATOR_OPERATORS = [
-    "Yusuf (PC2000)",
-    "Hendra (PC2000)",
-    "Joko (PC1250)",
-    "Rahmat (PC1250)",
-    "Slamet (PC850)",
-    "Wawan (PC850)",
-  ];
+  const EXCAVATOR_OPERATORS = EXCAVATOR_OPERATORS_SEED.map((o) => `${o.name} (${o.excavatorType})`);
   const HD_DRIVERS = [
     "Andi Saputra",
     "Bambang Setiawan",
@@ -490,6 +506,20 @@ async function main(): Promise<void> {
         source: "sim",
       });
     }
+    // Rem mendadak (ADMIN-6): kecepatan turun drastis tiba-tiba.
+    const hardBrake = rng.int(0, h.operatorFactor > 0.55 ? 3 : 1);
+    for (let k = 0; k < hardBrake; k++) {
+      eventRows.push({
+        id: `DE-${h.id}-HB-${k + 1}`,
+        unitId: h.id,
+        type: "hard_braking",
+        detail: "Rem mendadak, kecepatan turun drastis tiba-tiba",
+        atKm: Number(rng.range(2, 33).toFixed(1)),
+        hazardType: null,
+        timestamp: new Date(daysBefore(SEED_TODAY, rng.int(0, 7)).getTime() + rng.int(0, 86_399) * 1000),
+        source: "sim",
+      });
+    }
   }
   await insertChunked(eventRows, (c) => prisma.driverEvent.createMany({ data: c as never }));
 
@@ -526,6 +556,10 @@ async function main(): Promise<void> {
     ],
   });
 
+  // — Revisi akhir: katalog operator excavator (OPERATOR-2) + kondisi jalan per zona (ADMIN-8) —
+  await prisma.excavatorOperator.createMany({ data: EXCAVATOR_OPERATORS_SEED });
+  await prisma.zoneCondition.createMany({ data: ZONES.map((zone) => ({ zone, condition: "normal" })) });
+
   // — Ringkasan —
   const [units, haul, dump, tires, trips, exposures, payloads, calibrations, massInputs] = await Promise.all([
     prisma.unit.count(),
@@ -558,7 +592,7 @@ async function main(): Promise<void> {
     PayloadEvent: payloads,
     CalibrationRecord: calibrations,
     "MassInput (F2 operator)": massInputs,
-    "RoadHazard (F3 LiDAR sim)": hazards,
+    "RoadHazard (kamera AI sim)": hazards,
     "DriverEvent (F3 sim)": driverEvents,
   });
   console.log(`Payload status — under: ${under} · ok: ${ok} · over: ${over}`);

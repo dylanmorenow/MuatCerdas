@@ -142,8 +142,8 @@ export function Dashboard() {
             <Card className="mt-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="font-semibold text-slate-800">
-                  Peta bahaya jalan (prototipe LiDAR)
-                  <InfoTip text="Bahaya di sepanjang jalan dari CPP KM 33 ke Jetty. Datanya dari alat LiDAR di truk paling depan dan paling belakang. Ini contoh simulasi, bukan data langsung dari alat. Kondisi jalan dari peta ini dipakai untuk menghitung umur ban dan kecepatan aman." />
+                  Peta bahaya jalan (prototipe kamera AI)
+                  <InfoTip text="Bahaya di sepanjang jalan dari CPP KM 33 ke Jetty. Datanya dari kamera berbasis AI di truk paling depan dan paling belakang. Ini contoh simulasi, bukan data langsung dari kamera. Kondisi jalan dari peta ini dipakai untuk menghitung umur ban dan kecepatan aman." />
                 </h2>
                 <Link to="/roadmap" className="text-sm text-kpp-blue hover:underline">Buka peta →</Link>
               </div>

@@ -21,6 +21,8 @@ export interface RoadMapHazard {
   segmentId: string;
   positionKm: number;
   severity: number;
+  coveragePct: number;
+  urgent: boolean;
 }
 
 export interface RoadMapSegment {
@@ -83,6 +85,8 @@ export const seededRoadMapSource: RoadMapSource = {
         segmentId: h.segmentId,
         positionKm: h.positionKm,
         severity: h.severity,
+        coveragePct: h.coveragePct,
+        urgent: h.urgent,
       })),
       routeLengthKm: segments.reduce((s, x) => s + x.lengthKm, 0),
       mappers: pickMappers(haulUnits.map((u) => u.id)),

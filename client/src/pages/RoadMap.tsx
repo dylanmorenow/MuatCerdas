@@ -12,7 +12,7 @@ export function RoadMap() {
   if (isLoading || !data) {
     return (
       <>
-        <PageHeader title="Peta Jalan LiDAR (prototipe)" />
+        <PageHeader title="Peta Jalan Kamera AI (prototipe)" />
         {error ? <ErrorState message={(error as Error).message} onRetry={() => void refetch()} /> : <Loading />}
       </>
     );
@@ -24,15 +24,15 @@ export function RoadMap() {
   return (
     <>
       <PageHeader
-        title="Peta Jalan LiDAR (prototipe)"
-        subtitle="Bahaya jalan dari CPP KM 33 ke Jetty, dari alat LiDAR di truk paling depan dan paling belakang. Kondisi tiap ruas jalan dihitung dari bahaya ini, lalu dipakai untuk memperkirakan umur ban dan kecepatan aman. Data simulasi, bukan LiDAR langsung."
+        title="Peta Jalan Kamera AI (prototipe)"
+        subtitle="Bahaya jalan dari CPP KM 33 ke Jetty, dari kamera berbasis AI di truk paling depan dan paling belakang. Kondisi tiap ruas jalan dihitung dari bahaya ini, lalu dipakai untuk memperkirakan umur ban dan kecepatan aman. Data simulasi, bukan kamera langsung."
         actions={
           <button
             onClick={() => recompute.mutate()}
             disabled={recompute.isPending}
             className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90 disabled:opacity-50"
           >
-            {recompute.isPending ? "Memproses…" : "Hitung ulang dari LiDAR"}
+            {recompute.isPending ? "Memproses…" : "Hitung ulang dari kamera"}
           </button>
         }
       />
@@ -40,8 +40,8 @@ export function RoadMap() {
       <Card>
         <HazardMap data={data} />
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <Badge tone="slate">prototipe, data simulasi LiDAR</Badge>
-          <span>bukan LiDAR langsung. {data.hazards.length} bahaya terdeteksi. Terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>
+          <Badge tone="slate">prototipe, data simulasi kamera AI</Badge>
+          <span>bukan kamera langsung. {data.hazards.length} bahaya terdeteksi. Terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>
         </div>
       </Card>
 
@@ -52,8 +52,8 @@ export function RoadMap() {
             value={formatPersen(routeBadness)}
             hint={
               <>
-                dihitung dari bahaya LiDAR, dipakai untuk perkiraan umur ban
-                <InfoTip text="Rata-rata kerusakan sepanjang rute, ditimbang dengan panjang tiap ruas. Skornya kini berasal dari bahaya LiDAR, bukan diisi manual. Klik 'Hitung ulang dari LiDAR' untuk memperbarui dan perkiraan umur ban ikut berubah." />
+                dihitung dari bahaya kamera AI, dipakai untuk perkiraan umur ban
+                <InfoTip text="Rata-rata kerusakan sepanjang rute, ditimbang dengan panjang tiap ruas. Skornya kini berasal dari bahaya kamera AI, bukan diisi manual. Klik 'Hitung ulang dari kamera' untuk memperbarui dan perkiraan umur ban ikut berubah." />
               </>
             }
           />
@@ -63,7 +63,7 @@ export function RoadMap() {
         <Card className="lg:col-span-2 overflow-hidden p-0">
           <div className="border-b border-slate-200 px-5 py-3">
             <h2 className="font-semibold text-slate-800">Kondisi tiap ruas jalan</h2>
-            <p className="text-xs text-slate-400">Hanya tampilan. Bersumber dari peta LiDAR, bukan diisi manual.</p>
+            <p className="text-xs text-slate-400">Hanya tampilan. Bersumber dari peta kamera AI, bukan diisi manual.</p>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
