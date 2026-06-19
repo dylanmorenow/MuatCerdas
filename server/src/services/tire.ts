@@ -7,15 +7,22 @@ import {
   predictRemainingLife,
   attributeWear,
   tireAvoidableCost,
+  cyclesRemaining as cyclesRemainingFn,
+  gradeCounts,
+  worstGrade,
   type TireTrainingRow,
   type TireFeatures,
   type TireModel,
   type CostParams,
+  type TireRiskGrade,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { getDriverEventSummaryByUnit } from "./driverEvents";
 
 const MS_PER_DAY = 86_400_000;
+
+// Jarak satu cycle (pulang-pergi) rute CPP KM33 → Jetty ~35 km × 2 = 70 km (ASUMSI).
+const CYCLE_KM = 70;
 
 // Ambang status sisa umur (km) — bertanda asumsi, mudah diubah.
 export const TIRE_STATUS_WARN_KM = 25_000;
@@ -152,6 +159,9 @@ export interface TireUnitSummary {
   confidence: number;
   usedFallback: boolean;
   status: TireStatus;
+  cyclesRemaining: number;
+  riskGrade: TireRiskGrade | null;
+  extraWearKm: number;
 }
 
 export interface TireHistoryRow {
@@ -196,7 +206,20 @@ export interface TireRecommendation {
   factor: string;
   estimatedSavingsIdr: number;
   priority: number; // makin tinggi makin mendesak
+  grade: TireRiskGrade; // A/B/C — untuk pemisahan tabel rekomendasi (ADMIN-7)
 }
+
+// Grade tiap faktor masalah (ADMIN-7). Faktor jalan/zona bahaya bisa di-override per unit.
+const FACTOR_GRADE: Record<string, TireRiskGrade> = {
+  "Sisa umur": "A",
+  Muatan: "A",
+  "Kondisi jalan": "A",
+  "Tekanan ban": "B",
+  Operator: "B",
+  "Driver ngebut": "A",
+  "Driver rem mendadak": "B",
+  "Lewat zona bahaya": "A",
+};
 
 function modelSummary(model: TireModel): TireModelSummary {
   return {
@@ -373,16 +396,20 @@ function predictFor(ctx: UnitContext, model: TireModel) {
 
 function summaryFor(ctx: UnitContext, model: TireModel): TireUnitSummary {
   const p = predictFor(ctx, model);
+  const remainingLifeKm = Math.round(p.remainingLifeKm);
   return {
     id: ctx.id,
     model: ctx.model,
     predictedLifeKm: Math.round(p.predictedLifeKm),
-    remainingLifeKm: Math.round(p.remainingLifeKm),
+    remainingLifeKm,
     remainingLifeLowKm: Math.round(p.remainingLifeLowKm),
     remainingLifeHighKm: Math.round(p.remainingLifeHighKm),
     confidence: Number(p.confidence.toFixed(3)),
     usedFallback: p.usedFallback,
     status: tireStatus(p.remainingLifeKm),
+    cyclesRemaining: cyclesRemainingFn(remainingLifeKm, CYCLE_KM),
+    riskGrade: null, // diisi di getTireUnits dari data kejadian driver
+    extraWearKm: 0,
   };
 }
 
@@ -392,9 +419,16 @@ function summaryFor(ctx: UnitContext, model: TireModel): TireUnitSummary {
 
 /** Daftar unit truk hauling + ringkasan prediksi (diurut sisa umur menaik). */
 export async function getTireUnits(): Promise<TireUnitSummary[]> {
-  const ctx = await loadContext();
+  const [ctx, eventSummary] = await Promise.all([loadContext(), getDriverEventSummaryByUnit()]);
   return ctx.units
-    .map((u) => summaryFor(u, ctx.model))
+    .map((u) => {
+      const s = summaryFor(u, ctx.model);
+      const ev = eventSummary[u.id];
+      // Risiko ban di luar jarak tempuh: dari kejadian driver (ngebut/rem mendadak/lewat bahaya).
+      s.riskGrade = ev?.worstGrade ?? null;
+      s.extraWearKm = ev?.extraWearKm ?? 0;
+      return s;
+    })
     .sort((a, b) => a.remainingLifeKm - b.remainingLifeKm);
 }
 
@@ -483,6 +517,7 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
         factor: "Sisa umur",
         estimatedSavingsIdr: 0,
         priority: 100 + Math.max(0, TIRE_STATUS_CRITICAL_KM - summary.remainingLifeKm) / 1000,
+        grade: "A",
       });
     }
 
@@ -500,6 +535,7 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
           factor: c.factor,
           estimatedSavingsIdr: Math.round(capturedPerUnit * share),
           priority: Math.round(c.contribution / 100),
+          grade: FACTOR_GRADE[c.factor] ?? "B",
         });
       }
     }
@@ -516,6 +552,20 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
         factor: "Driver ngebut",
         estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.overspeedCount * 0.05)),
         priority: 60 + ev.overspeedCount,
+        grade: "A",
+      });
+    }
+    // ADMIN-6 — rekomendasi dari rem mendadak (kecepatan turun drastis tiba-tiba).
+    if (ev && ev.hardBrakingCount > 0) {
+      recs.push({
+        unitId: u.id,
+        model: u.model,
+        action: "Beri arahan agar tidak rem mendadak; jaga jarak dan kecepatan",
+        reason: `Rem mendadak ${ev.hardBrakingCount} kali. Beban kejut mempercepat keausan dan kerusakan ban.`,
+        factor: "Driver rem mendadak",
+        estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.4, ev.hardBrakingCount * 0.04)),
+        priority: 50 + ev.hardBrakingCount,
+        grade: "B",
       });
     }
     if (ev && ev.hazardCount > 0) {
@@ -528,6 +578,7 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
         factor: "Lewat zona bahaya",
         estimatedSavingsIdr: Math.round(capturedPerUnit * Math.min(0.5, ev.hazardCount * 0.04)),
         priority: 55 + ev.hazardCount,
+        grade: worstGrade(gradeCounts(ev.hazardTypes)) ?? "A",
       });
     }
   }

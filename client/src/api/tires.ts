@@ -15,6 +15,9 @@ export interface TireUnitSummary {
   confidence: number;
   usedFallback: boolean;
   status: TireStatus;
+  cyclesRemaining: number;
+  riskGrade: "A" | "B" | "C" | null;
+  extraWearKm: number;
 }
 
 export interface FactorContribution {
@@ -79,6 +82,7 @@ export interface TireRecommendation {
   factor: string;
   estimatedSavingsIdr: number;
   priority: number;
+  grade: "A" | "B" | "C";
 }
 
 export function useTireUnits() {

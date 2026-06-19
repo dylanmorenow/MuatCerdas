@@ -1,9 +1,10 @@
-// Revisi F3 — kejadian per unit dari surface driver (SIMULASI): overspeed (vs Vmax_safe) &
-// melewati zona bahaya. Dikonsumsi rekomendasi Modul A. Masuk via antrean offline operator.
+// Revisi F3 + akhir — kejadian per unit dari surface driver (SIMULASI): overspeed, melewati
+// zona bahaya, rem mendadak. Dikonsumsi rekomendasi Modul A + grading risiko ban.
 
+import { gradeCounts, estimateExtraWearKm, worstGrade, type GradeCounts, type TireRiskGrade } from "@muatcerdas/shared";
 import { prisma } from "../db";
 
-const EVENT_TYPES = ["overspeed", "hazard"] as const;
+const EVENT_TYPES = ["overspeed", "hazard", "hard_braking"] as const;
 type EventType = (typeof EVENT_TYPES)[number];
 
 export interface DriverEventRow {
@@ -54,28 +55,62 @@ export interface UnitEventSummary {
   unitId: string;
   overspeedCount: number;
   hazardCount: number;
+  hardBrakingCount: number;
   hazardTypes: string[];
+  /** Semua penyebab risiko (per kejadian) untuk grading: overspeed, hard_braking, tiap tipe bahaya. */
+  causes: string[];
+  grades: GradeCounts;
+  worstGrade: TireRiskGrade | null;
+  extraWearKm: number;
   lastAtKm: number | null;
   lastDetail: string | null;
 }
 
-/** Ringkasan event per unit (untuk rekomendasi Modul A): #overspeed, #hazard, jenis bahaya dilewati. */
+/** Ringkasan event per unit (untuk rekomendasi Modul A + grading risiko ban). */
 export async function getDriverEventSummaryByUnit(): Promise<Record<string, UnitEventSummary>> {
   const recs = await prisma.driverEvent.findMany({ orderBy: { timestamp: "desc" }, take: 2000 });
   const out: Record<string, UnitEventSummary> = {};
   for (const r of recs) {
     const s =
       out[r.unitId] ??
-      (out[r.unitId] = { unitId: r.unitId, overspeedCount: 0, hazardCount: 0, hazardTypes: [], lastAtKm: null, lastDetail: null });
-    if (r.type === "overspeed") s.overspeedCount++;
+      (out[r.unitId] = {
+        unitId: r.unitId,
+        overspeedCount: 0,
+        hazardCount: 0,
+        hardBrakingCount: 0,
+        hazardTypes: [],
+        causes: [],
+        grades: { A: 0, B: 0, C: 0 },
+        worstGrade: null,
+        extraWearKm: 0,
+        lastAtKm: null,
+        lastDetail: null,
+      });
+    if (r.type === "overspeed") {
+      s.overspeedCount++;
+      s.causes.push("overspeed");
+    }
+    if (r.type === "hard_braking") {
+      s.hardBrakingCount++;
+      s.causes.push("hard_braking");
+    }
     if (r.type === "hazard") {
       s.hazardCount++;
-      if (r.hazardType && !s.hazardTypes.includes(r.hazardType)) s.hazardTypes.push(r.hazardType);
+      if (r.hazardType) {
+        s.causes.push(r.hazardType);
+        if (!s.hazardTypes.includes(r.hazardType)) s.hazardTypes.push(r.hazardType);
+      }
     }
     if (s.lastDetail === null) {
       s.lastDetail = r.detail;
       s.lastAtKm = r.atKm;
     }
+  }
+  // Derivasi grading per unit (shared).
+  for (const s of Object.values(out)) {
+    s.grades = gradeCounts(s.causes);
+    s.worstGrade = worstGrade(s.grades);
+    s.extraWearKm = estimateExtraWearKm(s.grades);
   }
   return out;
 }

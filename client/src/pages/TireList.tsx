@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { formatNumber, formatPersen } from "@muatcerdas/shared";
+import { formatNumber } from "@muatcerdas/shared";
 import { useTireUnits, type TireUnitSummary } from "../api/tires";
 import {
   PageHeader,
   Card,
   Stat,
   StatusBadge,
+  GradeBadge,
   Loading,
   ErrorState,
   InfoTip,
@@ -29,8 +30,8 @@ export function TireList() {
           data ? (
             <ExportButton
               filename="tire-prediksi.csv"
-              headers={["unit", "model", "prediksiUmurKm", "sisaUmurKm", "keyakinan", "status"]}
-              rows={data.map((u) => [u.id, u.model, u.predictedLifeKm, u.remainingLifeKm, u.confidence, u.status])}
+              headers={["unit", "model", "prediksiUmurKm", "sisaUmurKm", "sisaCycle", "gradeRisiko", "kmHilangRisiko", "status"]}
+              rows={data.map((u) => [u.id, u.model, u.predictedLifeKm, u.remainingLifeKm, u.cyclesRemaining, u.riskGrade ?? "-", u.extraWearKm, u.status])}
             />
           ) : undefined
         }
@@ -56,11 +57,11 @@ export function TireList() {
                   <th className="px-4 py-3 font-medium">Model</th>
                   <th className="px-4 py-3 font-medium">
                     Sisa umur
-                    <InfoTip text="Perkiraan total umur ban dikurangi jarak yang sudah ditempuh ban saat ini." />
+                    <InfoTip text="Perkiraan total umur ban dikurangi jarak yang sudah ditempuh. Juga ditampilkan kira-kira berapa kali angkut (cycle) lagi ban bisa dipakai. Satu cycle pulang-pergi sekitar 70 km." />
                   </th>
                   <th className="px-4 py-3 font-medium">
-                    Tingkat keyakinan
-                    <InfoTip text="Seberapa cocok perhitungan dengan data masa lalu unit ini. Makin tinggi makin bisa dipercaya. Tanda 'perkiraan awal' berarti datanya masih sedikit, jadi dipakai angka umum dari merek ban." />
+                    Risiko ban (di luar jarak)
+                    <InfoTip text="Perkiraan pengurangan umur ban karena kondisi jalan dan gaya berkendara, di luar jarak tempuh biasa. Dikelompokkan: Grade A risiko sangat tinggi, B tinggi, C sedang." />
                   </th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
@@ -74,13 +75,14 @@ export function TireList() {
                   >
                     <td className="px-4 py-3 font-medium text-kpp-blue">{u.id}</td>
                     <td className="px-4 py-3 text-slate-600">{u.model}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{formatRemainingKm(u.remainingLifeKm)}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {formatPersen(u.confidence)}
-                      {u.usedFallback && (
-                        <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
-                          perkiraan awal
-                        </span>
+                    <td className="px-4 py-3 font-medium text-slate-800">
+                      {formatRemainingKm(u.remainingLifeKm)}
+                      <div className="text-[11px] font-normal text-slate-400">≈ {formatNumber(u.cyclesRemaining)} cycle lagi</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <GradeBadge grade={u.riskGrade} />
+                      {u.extraWearKm > 0 && (
+                        <div className="mt-0.5 text-[11px] text-slate-400">≈ {formatNumber(u.extraWearKm)} km lebih cepat aus</div>
                       )}
                     </td>
                     <td className="px-4 py-3">

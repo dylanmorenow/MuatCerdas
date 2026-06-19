@@ -72,6 +72,14 @@ export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
   );
 }
 
+/** Badge grade risiko ban (A/B/C). null = risiko rendah. */
+export function GradeBadge({ grade }: { grade: "A" | "B" | "C" | null }) {
+  if (grade === null) return <Badge tone="slate">Risiko rendah</Badge>;
+  const tone: Tone = grade === "A" ? "red" : grade === "B" ? "amber" : "blue";
+  const label = grade === "A" ? "Grade A — sangat tinggi" : grade === "B" ? "Grade B — tinggi" : "Grade C — sedang";
+  return <Badge tone={tone}>{label}</Badge>;
+}
+
 /** Sisa umur km: nilai negatif = ban sudah terlewati jatuh tempo. */
 export function formatRemainingKm(km: number): string {
   if (km < 0) return `Terlewati ${formatNumber(Math.abs(km))} km`;
