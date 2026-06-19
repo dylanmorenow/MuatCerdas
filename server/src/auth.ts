@@ -45,9 +45,14 @@ export async function authenticateUser(username: string, password: string): Prom
 /** Path publik (tak butuh token). */
 const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/config", "/api/auth/login"]);
 /** Path GET yang boleh diakses driver. Selain ini → 403 (FR-0004-2). */
-const DRIVER_GET_PATHS = new Set(["/api/auth/me", "/api/driver/me", "/api/roadmap"]);
-/** Path POST yang boleh driver (lapor massa F2 + kejadian overspeed/hazard F3). Kepemilikan unit dicek di route. */
-const DRIVER_POST_PATHS = new Set(["/api/mass", "/api/driver/event"]);
+const DRIVER_GET_PATHS = new Set([
+  "/api/auth/me",
+  "/api/driver/me",
+  "/api/roadmap",
+  "/api/mass/excavator-operators", // dropdown operator excavator (OPERATOR-2)
+]);
+/** Path POST yang boleh driver (lapor massa F2 + kejadian F3 + tambah operator excavator). */
+const DRIVER_POST_PATHS = new Set(["/api/mass", "/api/driver/event", "/api/mass/excavator-operators"]);
 
 /** Apakah driver boleh mengakses (murni, di-unit-test). */
 export function isDriverAllowed(method: string, path: string): boolean {

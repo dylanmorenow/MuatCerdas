@@ -28,7 +28,7 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
       msgs.push(`${r.sent ? "Terkirim" : "Antre"} (ngebut): ${detail}`);
     }
 
-    // 2) Hazard: melewati salah satu bahaya pada peta LiDAR.
+    // 2) Hazard: melewati salah satu bahaya pada peta kamera AI.
     const hazards = roadMap?.hazards ?? [];
     if (hazards.length) {
       const h = hazards[Math.floor(Math.random() * hazards.length)]!;
@@ -44,7 +44,17 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
       msgs.push(`${r.sent ? "Terkirim" : "Antre"} (bahaya): ${detail}`);
     }
 
-    setLog((prev) => [...msgs, ...prev].slice(0, 4));
+    // 3) Rem mendadak: kecepatan turun drastis tiba-tiba (terdeteksi dari rekaman perjalanan).
+    if (Math.random() < 0.55) {
+      const before = Math.round(vmaxKmh * (0.85 + Math.random() * 0.15));
+      const after = Math.round(before * (0.2 + Math.random() * 0.25));
+      const atKm = Number((2 + Math.random() * 31).toFixed(1));
+      const detail = `Kecepatan turun drastis dari ${before} ke ${after} km/jam di KM ${atKm}`;
+      const r = await enqueue("/api/driver/event", { unitId, type: "hard_braking", detail, atKm, source: "sim" });
+      msgs.push(`${r.sent ? "Terkirim" : "Antre"} (rem mendadak): ${detail}`);
+    }
+
+    setLog((prev) => [...msgs, ...prev].slice(0, 5));
     setBusy(false);
     void qc.invalidateQueries({ queryKey: ["driver-events"] });
     void qc.invalidateQueries({ queryKey: ["tire-recommendations"] });
@@ -63,7 +73,7 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
         </button>
       </div>
       <p className="text-[11px] text-slate-400">
-        Mendeteksi saat ngebut (di atas batas aman) dan bahaya yang dilewati, lalu mengirimnya ke surveyor untuk jadi
+        Mendeteksi saat ngebut, rem mendadak, dan bahaya yang dilewati, lalu mengirimnya ke surveyor untuk jadi
         bahan rekomendasi ban. Ini simulasi, bukan alat asli di kabin.
       </p>
       {log.length > 0 && (

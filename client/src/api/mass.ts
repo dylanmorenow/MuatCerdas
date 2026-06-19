@@ -55,6 +55,28 @@ export function useOperatorData() {
   });
 }
 
+export interface ExcavatorOperator {
+  id: string;
+  name: string;
+  excavatorType: string;
+}
+
+export function useExcavatorOperators() {
+  return useQuery({
+    queryKey: ["excavator-operators"],
+    queryFn: () => apiGet<ExcavatorOperator[]>("/api/mass/excavator-operators"),
+  });
+}
+
+export function useAddExcavatorOperator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; excavatorType: string }) =>
+      apiSend<ExcavatorOperator>("/api/mass/excavator-operators", "POST", body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["excavator-operators"] }),
+  });
+}
+
 /** Kirim langsung satu laporan (dipakai jalur online; offline pakai lib/offlineQueue). */
 export function useAddMass() {
   const qc = useQueryClient();

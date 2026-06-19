@@ -21,4 +21,8 @@ describe("isDriverAllowed (penegakan peran driver, FR-0004-2)", () => {
     expect(isDriverAllowed("POST", "/api/driver/event")).toBe(true);
     expect(isDriverAllowed("GET", "/api/driver/events")).toBe(false); // daftar = admin
   });
+  it("driver boleh akses katalog operator excavator (dropdown)", () => {
+    expect(isDriverAllowed("GET", "/api/mass/excavator-operators")).toBe(true);
+    expect(isDriverAllowed("POST", "/api/mass/excavator-operators")).toBe(true);
+  });
 });

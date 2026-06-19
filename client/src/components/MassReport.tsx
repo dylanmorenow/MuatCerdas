@@ -5,7 +5,10 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { materialLabel } from "@muatcerdas/shared";
 import { useOfflineQueue } from "../lib/useOfflineQueue";
+import { useExcavatorOperators, useAddExcavatorOperator } from "../api/mass";
 import { cx } from "./ui";
+
+const EXCAVATOR_TYPES = ["PC2000", "PC1250", "PC850"];
 
 /** Pil status koneksi tersimulasi + jumlah laporan tertahan + toggle. */
 export function OfflineToggle() {
@@ -52,14 +55,37 @@ export function MassReportForm({
   const isHd = category === "pit_dumper";
   const { offline, enqueue } = useOfflineQueue();
   const qc = useQueryClient();
+  const { data: excOperators } = useExcavatorOperators();
+  const addExc = useAddExcavatorOperator();
 
   const [material, setMaterial] = useState<"coal" | "overburden">("coal");
   const [totalT, setTotalT] = useState("");
   const [b1, setB1] = useState("");
   const [b2, setB2] = useState("");
-  const [exc, setExc] = useState("");
+  const [excId, setExcId] = useState("");
+  const [showAddExc, setShowAddExc] = useState(false);
+  const [newExcName, setNewExcName] = useState("");
+  const [newExcType, setNewExcType] = useState(EXCAVATOR_TYPES[0]!);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Msg | null>(null);
+
+  const selectedExc = excOperators?.find((o) => o.id === excId);
+  const excLabel = selectedExc ? `${selectedExc.name} (${selectedExc.excavatorType})` : null;
+
+  const addNewExcavatorOperator = () => {
+    const name = newExcName.trim();
+    if (!name) return;
+    addExc.mutate(
+      { name, excavatorType: newExcType },
+      {
+        onSuccess: (op) => {
+          setExcId(op.id);
+          setShowAddExc(false);
+          setNewExcName("");
+        },
+      },
+    );
+  };
 
   const reset = () => {
     setTotalT("");
@@ -72,7 +98,7 @@ export function MassReportForm({
     setBusy(true);
     setMsg(null);
     const body: Record<string, unknown> = isHd
-      ? { unitId, material, totalT: Number(totalT), excavatorOperator: exc.trim() || null, operatorName, source: "operator" }
+      ? { unitId, material, totalT: Number(totalT), excavatorOperator: excLabel, operatorName, source: "operator" }
       : { unitId, material: "coal", bucket1T: Number(b1), bucket2T: Number(b2), operatorName, source: "operator" };
     const r = await enqueue("/api/mass", body);
     setBusy(false);
@@ -128,16 +154,60 @@ export function MassReportForm({
                 />
               </label>
             </div>
-            <label className="block">
-              <span className="mb-1 block text-xs text-slate-500">Nama operator excavator pemuat</span>
-              <input
-                type="text"
-                value={exc}
-                onChange={(e) => setExc(e.target.value)}
-                placeholder="contoh: Yusuf (PC2000)"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base"
-              />
-            </label>
+            <div>
+              <span className="mb-1 block text-xs text-slate-500">Operator excavator pemuat</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={excId}
+                  onChange={(e) => setExcId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base"
+                >
+                  <option value="">Pilih operator…</option>
+                  {excOperators?.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({o.excavatorType})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddExc((v) => !v)}
+                  className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+                >
+                  {showAddExc ? "Tutup" : "Tambah baru"}
+                </button>
+              </div>
+              {showAddExc && (
+                <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-2">
+                  <input
+                    type="text"
+                    value={newExcName}
+                    onChange={(e) => setNewExcName(e.target.value)}
+                    placeholder="Nama operator baru"
+                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                  <select
+                    value={newExcType}
+                    onChange={(e) => setNewExcType(e.target.value)}
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  >
+                    {EXCAVATOR_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addNewExcavatorOperator}
+                    disabled={addExc.isPending || !newExcName.trim()}
+                    className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90 disabled:opacity-50"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div className="grid grid-cols-2 gap-3">

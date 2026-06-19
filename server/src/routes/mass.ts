@@ -4,7 +4,13 @@
 // GET  /api/mass/operator-data: surveyor (admin) — semua laporan operator dikelompokkan per jenis.
 
 import type { FastifyInstance } from "fastify";
-import { addMassInput, getMassMonitoring, getOperatorData } from "../services/mass";
+import {
+  addMassInput,
+  getMassMonitoring,
+  getOperatorData,
+  listExcavatorOperators,
+  addExcavatorOperator,
+} from "../services/mass";
 import { type TokenPayload } from "../auth";
 
 export async function massRoutes(app: FastifyInstance): Promise<void> {
@@ -41,4 +47,16 @@ export async function massRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/mass/monitoring", async () => getMassMonitoring());
 
   app.get("/api/mass/operator-data", async () => getOperatorData());
+
+  // OPERATOR-2 — katalog operator excavator (dropdown). GET: driver + admin. POST: tambah anggota baru.
+  app.get("/api/mass/excavator-operators", async () => listExcavatorOperators());
+
+  app.post("/api/mass/excavator-operators", async (request, reply) => {
+    const body = (request.body ?? {}) as { name?: string; excavatorType?: string };
+    try {
+      return await addExcavatorOperator({ name: body.name, excavatorType: body.excavatorType });
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
 }

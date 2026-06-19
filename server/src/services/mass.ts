@@ -154,6 +154,33 @@ function numOrNull(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// — Revisi akhir (OPERATOR-2): katalog operator excavator untuk dropdown laporan HD785 —
+
+export interface ExcavatorOperatorRow {
+  id: string;
+  name: string;
+  excavatorType: string;
+}
+
+/** Daftar operator excavator (urut nama) untuk dropdown. */
+export async function listExcavatorOperators(): Promise<ExcavatorOperatorRow[]> {
+  return prisma.excavatorOperator.findMany({ orderBy: { name: "asc" } });
+}
+
+/** Tambah operator/anggota baru. Idempoten: bila nama sudah ada, kembalikan yang lama. */
+export async function addExcavatorOperator(input: {
+  name?: string;
+  excavatorType?: string;
+}): Promise<ExcavatorOperatorRow> {
+  const name = (input.name ?? "").trim();
+  const excavatorType = (input.excavatorType ?? "").trim();
+  if (!name) throw new Error("Nama operator excavator wajib diisi");
+  if (!excavatorType) throw new Error("Tipe excavator wajib diisi");
+  const existing = await prisma.excavatorOperator.findUnique({ where: { name } });
+  if (existing) return existing;
+  return prisma.excavatorOperator.create({ data: { name, excavatorType } });
+}
+
 function toRow(r: {
   id: string;
   unitId: string;
