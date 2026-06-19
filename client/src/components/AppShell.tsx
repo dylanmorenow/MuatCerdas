@@ -64,7 +64,7 @@ export function AppShell() {
         )}
       >
         <div className="border-b border-white/10 px-5 py-5">
-          <div className="text-lg font-bold">MuatCerdas</div>
+          <div className="text-lg font-bold">KPPulse</div>
           <div className="text-xs text-white/70">Cerdas kelola ban dan muatan, KPP Mining</div>
         </div>
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
@@ -127,7 +127,7 @@ export function AppShell() {
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span className="font-bold text-kpp-green">MuatCerdas</span>
+          <span className="font-bold text-kpp-green">KPPulse</span>
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">

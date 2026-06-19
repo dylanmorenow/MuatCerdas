@@ -24,7 +24,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <form onSubmit={submit} className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="text-xl font-bold text-kpp-green">MuatCerdas</div>
+        <div className="text-xl font-bold text-kpp-green">KPPulse</div>
         <div className="mb-5 text-sm text-slate-500">Cerdas kelola ban dan muatan, KPP Mining</div>
 
         <label className="mb-3 block">

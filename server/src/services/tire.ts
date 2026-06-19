@@ -18,6 +18,7 @@ import {
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { getDriverEventSummaryByUnit } from "./driverEvents";
+import { resolvedKeySet } from "./resolved";
 
 const MS_PER_DAY = 86_400_000;
 
@@ -207,7 +208,11 @@ export interface TireRecommendation {
   estimatedSavingsIdr: number;
   priority: number; // makin tinggi makin mendesak
   grade: TireRiskGrade; // A/B/C — untuk pemisahan tabel rekomendasi (ADMIN-7)
+  actionType: string; // "tire_replace" | "recommendation" — untuk tandai selesai (ADMIN-5)
+  refKey: string; // kunci unik tindakan (unitId::factor)
 }
+
+type RecDraft = Omit<TireRecommendation, "actionType" | "refKey">;
 
 // Grade tiap faktor masalah (ADMIN-7). Faktor jalan/zona bahaya bisa di-override per unit.
 const FACTOR_GRADE: Record<string, TireRiskGrade> = {
@@ -485,8 +490,12 @@ const FACTOR_ACTION: Record<string, { action: string; reason: string }> = {
 
 /** Rekomendasi tindakan ban + estimasi penghematan (FR-0002-6). */
 export async function getTireRecommendations(): Promise<TireRecommendation[]> {
-  const [ctx, eventSummary] = await Promise.all([loadContext(), getDriverEventSummaryByUnit()]);
-  const recs: TireRecommendation[] = [];
+  const [ctx, eventSummary, resolved] = await Promise.all([
+    loadContext(),
+    getDriverEventSummaryByUnit(),
+    resolvedKeySet(),
+  ]);
+  const recs: RecDraft[] = [];
 
   for (const u of ctx.units) {
     const summary = summaryFor(u, ctx.model);
@@ -583,5 +592,12 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
     }
   }
 
-  return recs.sort((a, b) => b.priority - a.priority || b.estimatedSavingsIdr - a.estimatedSavingsIdr);
+  // Lengkapi kunci tindakan + buang yang sudah ditandai selesai (ADMIN-5).
+  return recs
+    .map((r): TireRecommendation => {
+      const actionType = r.factor === "Sisa umur" ? "tire_replace" : "recommendation";
+      return { ...r, actionType, refKey: `${r.unitId}::${r.factor}` };
+    })
+    .filter((r) => !resolved.has(`${r.actionType}::${r.refKey}`))
+    .sort((a, b) => b.priority - a.priority || b.estimatedSavingsIdr - a.estimatedSavingsIdr);
 }

@@ -23,6 +23,8 @@ export interface SpeedUnitRow {
   overTarget: boolean;
   exceedsRequired: boolean;
   reason: string;
+  zone: string | null;
+  zoneCondition: string;
 }
 
 export interface Hd785SpeedRow {

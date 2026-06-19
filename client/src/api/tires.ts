@@ -83,6 +83,8 @@ export interface TireRecommendation {
   estimatedSavingsIdr: number;
   priority: number;
   grade: "A" | "B" | "C";
+  actionType: string;
+  refKey: string;
 }
 
 export function useTireUnits() {

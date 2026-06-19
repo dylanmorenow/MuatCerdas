@@ -35,8 +35,8 @@ export async function downloadReportPdf(d: DashboardData): Promise<void> {
   const doc = {
     pageMargins: [40, 50, 40, 40],
     content: [
-      { text: "MuatCerdas — Laporan Manajemen", style: "h1" },
-      { text: `Tire & Payload Intelligence — KPP Mining · ${tanggal}`, style: "sub", margin: [0, 0, 0, 14] },
+      { text: "Laporan Manajemen KPPulse", style: "h1" },
+      { text: `Kelola ban dan muatan, KPP Mining · ${tanggal}`, style: "sub", margin: [0, 0, 0, 14] },
 
       { text: "Ringkasan Finansial (asumsi tersimpan)", style: "h2" },
       {
@@ -88,5 +88,5 @@ export async function downloadReportPdf(d: DashboardData): Promise<void> {
     defaultStyle: { fontSize: 10 },
   };
 
-  pdfMake.createPdf(doc).download("Laporan-MuatCerdas.pdf");
+  pdfMake.createPdf(doc).download("Laporan-KPPulse.pdf");
 }

@@ -21,8 +21,12 @@ import {
   type SpeedDecision,
   type ProductionSpeedResult,
   latestMassPerUnit,
+  roadOpsSpeedFactor,
+  roadOpsConditionLabel,
+  type RoadOpsCondition,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
+import { zoneConditionMap } from "./zones";
 
 // ——————————————————————————————————————————————————————————————
 // Tipe keluaran
@@ -46,6 +50,9 @@ export interface SpeedUnitRow {
   exceedsRequired: boolean;
   /** Alasan singkat (Bahasa Indonesia) untuk panduan driver. */
   reason: string;
+  /** Zona operasi & kondisi jalannya (ADMIN-8) — memengaruhi kecepatan aman. */
+  zone: string | null;
+  zoneCondition: string;
 }
 
 export interface Hd785SpeedRow {
@@ -152,6 +159,8 @@ export function buildSpeedUnitRow(args: {
     overTarget: unit.payloadKg > unit.targetKg,
     exceedsRequired: Number.isFinite(vRequiredWorkKmh) && vRequiredWorkKmh > vWork,
     reason: reasonText(payloadT, targetT, vTravel),
+    zone: null, // diisi getSpeedOverview dari Unit.zone + kondisi jalan (ADMIN-8)
+    zoneCondition: "normal",
   };
 }
 
@@ -351,15 +360,50 @@ async function hd785UnitInputs(massByUnit: Map<string, number>): Promise<SpeedUn
   }));
 }
 
+/** Zona operasi tiap truk hauling (Unit.zone). */
+async function haulZoneByUnit(): Promise<Map<string, string | null>> {
+  const units = await prisma.unit.findMany({ where: { category: "haul_truck" }, select: { id: true, zone: true } });
+  return new Map(units.map((u) => [u.id, u.zone]));
+}
+
+/** Terapkan kondisi jalan zona → turunkan kecepatan aman unit (ADMIN-8). Tak menyentuh rumus TKPH. */
+function applyZoneCondition(
+  u: SpeedUnitRow,
+  zoneByUnit: Map<string, string | null>,
+  zoneCond: Record<string, RoadOpsCondition>,
+): SpeedUnitRow {
+  const zone = zoneByUnit.get(u.id) ?? null;
+  const condition = (zone ? zoneCond[zone] : "normal") ?? "normal";
+  const factor = roadOpsSpeedFactor(condition);
+  if (factor >= 1) return { ...u, zone, zoneCondition: condition };
+  const vWork = roundKmh(u.vmaxSafeWorkKmh * factor);
+  const vTravel = roundKmh(u.vmaxSafeTravelKmh * factor);
+  return {
+    ...u,
+    vmaxSafeWorkKmh: vWork,
+    vmaxSafeTravelKmh: vTravel,
+    zone,
+    zoneCondition: condition,
+    reason: `${u.reason}. Jalan ${roadOpsConditionLabel(condition).toLowerCase()}, kecepatan diturunkan.`,
+  };
+}
+
 export async function getSpeedOverview(): Promise<SpeedOverview> {
-  const massByUnit = await operatorMassKgByUnit();
+  const [massByUnit, zoneCond, zoneByUnit] = await Promise.all([
+    operatorMassKgByUnit(),
+    zoneConditionMap(),
+    haulZoneByUnit(),
+  ]);
   const [params, catalog, haulUnits, hd785Units] = await Promise.all([
     loadSpeedParams(),
     loadCatalog(),
     haulUnitInputs(massByUnit),
     hd785UnitInputs(massByUnit),
   ]);
-  return computeSpeedModel({ params, catalog, haulUnits, hd785Units });
+  const overview = computeSpeedModel({ params, catalog, haulUnits, hd785Units });
+  // Kondisi jalan per zona menyetir kecepatan aman tiap unit (selain muatan).
+  overview.units = overview.units.map((u) => applyZoneCondition(u, zoneByUnit, zoneCond));
+  return overview;
 }
 
 export async function getSpeedParams(): Promise<{ params: SpeedParams; catalog: TkphCatalogEntry[] }> {

@@ -32,7 +32,7 @@ export function DriverDashboard() {
     <div className="min-h-screen bg-slate-100">
       <header className="flex items-center justify-between bg-kpp-green px-5 py-3 text-white">
         <div>
-          <div className="text-base font-bold">MuatCerdas untuk Driver</div>
+          <div className="text-base font-bold">KPPulse untuk Driver</div>
           {data && (
             <div className="text-xs text-white/80">
               {data.identity.name ?? "-"} · Unit {data.unit.id} ({data.unit.model}) · shift {data.identity.shift ?? "-"}

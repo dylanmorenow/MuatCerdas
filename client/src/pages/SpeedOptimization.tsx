@@ -7,9 +7,13 @@ import {
   vmaxSafeWorkKmh,
   workAvgToTravel,
   decideSpeed,
+  roadOpsConditionLabel,
+  ROAD_OPS_CONDITIONS,
   type SpeedParams,
+  type RoadOpsCondition,
 } from "@muatcerdas/shared";
 import { useSpeed, useSaveSpeedParams, useResetSpeedParams, type SpeedUnitRow, type Hd785SpeedRow } from "../api/speed";
+import { useZones, useSetZoneCondition } from "../api/zones";
 import { PageHeader, Card, Loading, ErrorState, InfoTip, Badge, cx } from "../components/ui";
 
 const kmh = (n: number) => (Number.isFinite(n) ? `${formatNumber(n, 1)} km/jam` : "-");
@@ -222,12 +226,15 @@ export function SpeedOptimization() {
         </div>
       </div>
 
+      {/* Kondisi jalan per zona (ADMIN-8) */}
+      <ZoneConditionPanel />
+
       {/* Tabel per-unit haul */}
       <Card className="mt-5 overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
             Per unit truk hauling
-            <InfoTip text="Kecepatan maksimum dihitung dari muatan dan ban tiap unit. Tabel memakai angka yang tersimpan. Klik Simpan untuk memperbarui." />
+            <InfoTip text="Kecepatan maksimum dihitung dari muatan dan ban tiap unit, lalu disesuaikan dengan kondisi jalan di zonanya. Tabel memakai angka yang tersimpan. Klik Simpan untuk memperbarui." />
           </h2>
           <span className="text-xs text-slate-400">{data.units.length} unit</span>
         </div>
@@ -237,6 +244,7 @@ export function SpeedOptimization() {
               <tr>
                 <th className="px-4 py-2.5 font-medium">Unit</th>
                 <th className="px-4 py-2.5 font-medium">Ban</th>
+                <th className="px-4 py-2.5 font-medium">Zona / jalan</th>
                 <th className="px-4 py-2.5 font-medium">Muatan</th>
                 <th className="px-4 py-2.5 font-medium">Beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Beban vs batas</th>
@@ -293,11 +301,20 @@ export function SpeedOptimization() {
   );
 }
 
+const ZONE_LABEL_SHORT: Record<string, string> = { cpp: "Dekat CPP", tengah: "Tengah", jetty: "Dekat Jetty" };
+
 function UnitRow({ u }: { u: SpeedUnitRow }) {
+  const condBad = u.zoneCondition !== "normal";
   return (
     <tr className={cx(u.exceedsRequired && "bg-red-50/50")}>
       <td className="px-4 py-2.5 font-medium text-slate-700">{u.id}<div className="text-xs font-normal text-slate-400">{u.model}</div></td>
       <td className="px-4 py-2.5 text-slate-600">{u.tireModel ?? "-"}</td>
+      <td className="px-4 py-2.5 text-slate-600">
+        {u.zone ? ZONE_LABEL_SHORT[u.zone] ?? u.zone : "-"}
+        <div className={cx("text-xs", condBad ? "font-medium text-amber-600" : "text-slate-400")}>
+          {roadOpsConditionLabel((u.zoneCondition as RoadOpsCondition) ?? "normal")}
+        </div>
+      </td>
       <td className="px-4 py-2.5 text-slate-600">
         {ton(u.payloadT)} {u.overTarget && <Badge tone="amber">over</Badge>}
       </td>
@@ -334,6 +351,39 @@ function Mini({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span className="font-medium text-slate-700">{value}</span>
     </div>
+  );
+}
+
+function ZoneConditionPanel() {
+  const { data: zones } = useZones();
+  const setCond = useSetZoneCondition();
+  if (!zones) return null;
+  return (
+    <Card className="mt-5">
+      <h2 className="mb-1 font-semibold text-slate-800">
+        Kondisi jalan per zona
+        <InfoTip text="Pilih kondisi jalan tiap zona. Kondisi yang lebih buruk menurunkan kecepatan aman semua unit di zona itu, jadi kecepatan tidak hanya dipengaruhi muatan. Licin berarti unit praktis berhenti." />
+      </h2>
+      <p className="mb-3 text-xs text-slate-400">Berubah langsung memengaruhi kecepatan unit di tabel bawah.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {zones.map((z) => (
+          <label key={z.zone} className="block">
+            <span className="mb-1 block text-xs text-slate-500">{z.label}</span>
+            <select
+              value={z.condition}
+              onChange={(e) => setCond.mutate({ zone: z.zone, condition: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              {ROAD_OPS_CONDITIONS.map((c) => (
+                <option key={c} value={c}>
+                  {roadOpsConditionLabel(c)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+    </Card>
   );
 }
 

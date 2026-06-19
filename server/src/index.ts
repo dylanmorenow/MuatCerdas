@@ -13,6 +13,8 @@ import { dataRoutes } from "./routes/data";
 import { driverRoutes } from "./routes/driver";
 import { roadmapRoutes } from "./routes/roadmap";
 import { massRoutes } from "./routes/mass";
+import { resolvedRoutes } from "./routes/resolved";
+import { zoneRoutes } from "./routes/zones";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -36,6 +38,8 @@ async function main(): Promise<void> {
   await app.register(driverRoutes);
   await app.register(roadmapRoutes);
   await app.register(massRoutes);
+  await app.register(resolvedRoutes);
+  await app.register(zoneRoutes);
 
   try {
     await app.listen({ port: PORT, host: "0.0.0.0" });

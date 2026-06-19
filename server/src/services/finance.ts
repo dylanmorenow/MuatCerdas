@@ -18,6 +18,7 @@ import { prisma } from "../db";
 import { getTireUnits } from "./tire";
 import { getPayloadAnalytics, getCalibrationHealth } from "./payload";
 import { coalLoadedTodayT } from "./mass";
+import { resolvedTireReplaceUnitIds } from "./resolved";
 
 /** Estimasi trip/hari per HD785 (ASUMSI F1; F2 memakai MassInput nyata). */
 const ASSUMED_TRIPS_PER_DAY = 8;
@@ -188,6 +189,9 @@ export async function getDashboard(): Promise<DashboardData> {
     ? Math.round(predicted.reduce((a, b) => a + b, 0) / predicted.length)
     : 0;
   const criticalCount = tireUnits.filter((u) => u.status === "critical").length;
+  // Biaya hanya dihitung untuk penggantian yang BELUM ditandai selesai (ADMIN-5).
+  const resolvedTireUnits = await resolvedTireReplaceUnitIds();
+  const pendingCritical = tireUnits.filter((u) => u.status === "critical" && !resolvedTireUnits.has(u.id)).length;
 
   // Kuota coal harian: F2 pakai laporan massa operator HARI INI (nyata) bila ada;
   // jika belum ada laporan, fallback estimasi (rata-rata payload coal HD785 × trip/hari).
@@ -201,8 +205,8 @@ export async function getDashboard(): Promise<DashboardData> {
     capexIdr: params.capexIdr,
     opexAnnualIdr: params.opexAnnualIdr,
     ops: {
-      tireReplacementCostIdr: tireReplacementCostIdr(criticalCount, params.tiresPerUnit, params.tirePriceIdr),
-      productionLossIdr: productionLossIdr(criticalCount, opsParams),
+      tireReplacementCostIdr: tireReplacementCostIdr(pendingCritical, params.tiresPerUnit, params.tirePriceIdr),
+      productionLossIdr: productionLossIdr(pendingCritical, opsParams),
       coalQuota: coalQuota(coalLoadedT, opsParams),
     },
     tire: {
