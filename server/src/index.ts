@@ -1,6 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { authConfig, registerAuth } from "./auth";
 import { authRoutes } from "./routes/auth";
 import { healthRoutes } from "./routes/health";
@@ -40,6 +44,19 @@ async function main(): Promise<void> {
   await app.register(massRoutes);
   await app.register(resolvedRoutes);
   await app.register(zoneRoutes);
+
+  // Produksi: server yang sama melayani hasil build client (SPA) + API satu origin.
+  const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../client/dist");
+  if (existsSync(clientDist)) {
+    await app.register(fastifyStatic, { root: clientDist, wildcard: false });
+    app.setNotFoundHandler((request, reply) => {
+      if (request.method === "GET" && !request.url.startsWith("/api")) {
+        return reply.sendFile("index.html"); // fallback rute SPA
+      }
+      return reply.code(404).send({ error: "Tidak ditemukan" });
+    });
+    app.log.info(`Menyajikan client dari ${clientDist}`);
+  }
 
   try {
     await app.listen({ port: PORT, host: "0.0.0.0" });

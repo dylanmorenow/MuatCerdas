@@ -27,6 +27,17 @@ npm run build          # build produksi client + cek tipe server
 ```
 Prasyarat: **Node ≥ 18**. Database: **SQLite** (tanpa setup berat). File `server/.env` minimal berisi `DATABASE_URL="file:./dev.db"` (UTF-8 tanpa BOM).
 
+## Deploy gratis (publik, untuk juri)
+Satu service melayani API + hasil build client (SPA) lewat `Dockerfile` (sudah disertakan). Paling mudah lewat **Render** (gratis, tanpa kartu kredit):
+
+1. Buka **https://render.com**, daftar/masuk dengan akun **GitHub**.
+2. **New → Blueprint**, pilih repo ini. Render membaca `render.yaml`, membangun `Dockerfile`, lalu memberi URL publik (mis. `https://kppulse.onrender.com`).
+3. Tunggu build selesai (~3–5 menit). Buka URL-nya. Login: admin `kpp` / `muatcerdas`, atau driver `andi` / `andi123` (HD785) dan `budi` / `budi123` (truk hauling).
+
+Catatan jujur: paket gratis memakai **SQLite ephemeral** — data di-seed ulang tiap instance start, dan instance "tidur" setelah ~15 menit menganggur (akses pertama berikutnya butuh ~1 menit untuk bangun). Cukup untuk demo; perubahan seperti "tandai selesai"/kondisi zona ikut tereset saat restart.
+
+Alternatif (juga gratis): host mana pun yang mendukung `Dockerfile` (Fly.io, Railway, dll.) — container mendengarkan `PORT` dari environment.
+
 ## Arsitektur
 TypeScript full-stack, npm workspaces:
 - **`shared/`** — otak domain **murni** (tipe, skema Zod, rumus PRD §12 + Modul C §C, format Rupiah) + Vitest. Dipakai server **dan** client → satu sumber perhitungan (SR-V5).

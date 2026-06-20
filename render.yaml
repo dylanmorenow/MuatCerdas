@@ -1,0 +1,16 @@
+# Blueprint Render (gratis, tanpa kartu). Deploy: Render → New → Blueprint → pilih repo ini.
+# Render membaca file ini, membangun Dockerfile, dan memberi URL publik.
+services:
+  - type: web
+    name: kppulse
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: AUTH_ENABLED
+        value: "true"
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: file:./prod.db

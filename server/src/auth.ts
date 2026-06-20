@@ -75,6 +75,9 @@ export async function registerAuth(app: FastifyInstance, cfg: AuthConfig): Promi
   app.addHook("onRequest", async (request, reply) => {
     if (request.method === "OPTIONS") return; // preflight CORS
     const path = request.url.split("?")[0] ?? request.url;
+    // Hanya jaga endpoint API. Berkas statis & shell SPA (di prod) dilayani publik;
+    // autentikasi ditangani layar login di client.
+    if (!path.startsWith("/api")) return;
     if (PUBLIC_PATHS.has(path)) return;
     try {
       await request.jwtVerify();
