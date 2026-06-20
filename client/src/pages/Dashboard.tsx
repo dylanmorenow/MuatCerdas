@@ -9,7 +9,8 @@ import { downloadReportPdf, downloadCsv } from "../lib/export";
 
 export function Dashboard() {
   const { data, isLoading, error, refetch } = useDashboard();
-  const { data: roadMap } = useRoadMap();
+  const { data: roadMap } = useRoadMap("haul");
+  const { data: siteMap } = useRoadMap("site");
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const exportCsv = () => {
@@ -137,17 +138,29 @@ export function Dashboard() {
             </Card>
           </div>
 
-          {/* Peta bahaya jalan LiDAR (prototipe) */}
+          {/* Peta bahaya kamera AI — rute hauling (atas) & rute in-pit site (bawah) */}
           {roadMap && (
             <Card className="mt-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="font-semibold text-slate-800">
-                  Peta bahaya jalan (prototipe kamera AI)
-                  <InfoTip text="Bahaya di sepanjang jalan dari CPP KM 33 ke Jetty. Datanya dari kamera berbasis AI di truk paling depan dan paling belakang. Ini contoh simulasi, bukan data langsung dari kamera. Kondisi jalan dari peta ini dipakai untuk menghitung umur ban dan kecepatan aman." />
+                  Peta bahaya jalan hauling (prototipe kamera AI)
+                  <InfoTip text="Bahaya di sepanjang rute hauling dari CPP KM 33 ke Jetty. Datanya dari kamera berbasis AI di truk paling depan dan paling belakang. Contoh simulasi, bukan data langsung dari kamera. Kondisi jalan dari peta ini dipakai untuk menghitung umur ban dan kecepatan aman." />
                 </h2>
                 <Link to="/roadmap" className="text-sm text-kpp-blue hover:underline">Buka peta →</Link>
               </div>
               <HazardMap data={roadMap} />
+            </Card>
+          )}
+          {siteMap && (
+            <Card className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-semibold text-slate-800">
+                  Peta bahaya jalan in-pit site Indexim Coalindo (prototipe kamera AI)
+                  <InfoTip text="Bahaya di sepanjang rute in-pit site Indexim Coalindo (rute HD785). Datanya dari kamera berbasis AI di unit paling depan dan paling belakang. Contoh simulasi, bukan data langsung dari kamera." />
+                </h2>
+                <Link to="/roadmap" className="text-sm text-kpp-blue hover:underline">Buka peta →</Link>
+              </div>
+              <HazardMap data={siteMap} />
             </Card>
           )}
 

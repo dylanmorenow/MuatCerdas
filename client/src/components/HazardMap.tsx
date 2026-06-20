@@ -62,9 +62,9 @@ export function HazardMap({ data }: { data: RoadMapData }) {
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${totalH}`} className="w-full" role="img" aria-label="Peta bahaya jalan kamera AI KM33 ke Jetty">
-        <text x={PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155">KM 33 (CPP)</text>
-        <text x={W - PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155" textAnchor="end">Jetty · PT Indexim Coalindo</text>
+      <svg viewBox={`0 0 ${W} ${totalH}`} className="w-full" role="img" aria-label="Peta bahaya jalan kamera AI">
+        <text x={PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155">{data.startLabel}</text>
+        <text x={W - PAD} y={Y_KM} fontSize="11" fontWeight="bold" fill="#334155" textAnchor="end">{data.endLabel}</text>
 
         {/* truk pemeta — glyph rect (emoji tak konsisten render di SVG) */}
         {mappers.lastUnitId && (

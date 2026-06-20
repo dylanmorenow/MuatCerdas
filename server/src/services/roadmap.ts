@@ -39,10 +39,13 @@ export interface RoadMapData {
   segments: RoadMapSegment[];
   hazards: RoadMapHazard[];
   routeLengthKm: number;
-  /** Truk ber-LiDAR (asumsi: lead + last). */
+  /** Truk ber-kamera (asumsi: lead + last). */
   mappers: { leadUnitId: string | null; lastUnitId: string | null };
   lastUpdated: string;
   source: string; // "simulasi"
+  /** Label ujung rute untuk peta (berbeda per area). */
+  startLabel: string;
+  endLabel: string;
 }
 
 /** Pilih truk pemeta lead/last (murni). */
@@ -100,6 +103,8 @@ export const seededRoadMapSource: RoadMapSource = {
       mappers: pickMappers(mapperUnits.map((u) => u.id)),
       lastUpdated: MAP_LAST_UPDATED,
       source: "simulasi",
+      startLabel: area === "site" ? "Loading Point" : "KM 33 (CPP)",
+      endLabel: area === "site" ? "Disposal · Site Indexim Coalindo" : "Jetty · PT Indexim Coalindo",
     };
   },
 };

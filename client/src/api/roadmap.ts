@@ -29,6 +29,8 @@ export interface RoadMapData {
   mappers: { leadUnitId: string | null; lastUnitId: string | null };
   lastUpdated: string;
   source: string;
+  startLabel: string;
+  endLabel: string;
 }
 
 export type MapArea = "haul" | "site";
