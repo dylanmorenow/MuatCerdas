@@ -1,31 +1,17 @@
-// Modul D + F3 — Peta Jalan LiDAR (prototipe). conditionScore DITURUNKAN dari bahaya LiDAR
-// (bukan slider manual) → menyetir Modul A/C. Admin dapat "recompute dari LiDAR".
+// Peta Jalan Kamera AI (prototipe). Dua rute: KM33→Jetty (truk hauling) & in-pit Indexim (HD785).
+// conditionScore diturunkan dari bahaya kamera AI (bukan slider manual) → menyetir Modul A/C.
 import { formatPersen, conditionColor } from "@muatcerdas/shared";
-import { useRoadMap, useRecomputeRoadmap } from "../api/roadmap";
+import { useRoadMap, useRecomputeRoadmap, type MapArea } from "../api/roadmap";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
 import { HazardMap } from "../components/HazardMap";
 
 export function RoadMap() {
-  const { data, isLoading, error, refetch } = useRoadMap();
   const recompute = useRecomputeRoadmap();
-
-  if (isLoading || !data) {
-    return (
-      <>
-        <PageHeader title="Peta Jalan Kamera AI (prototipe)" />
-        {error ? <ErrorState message={(error as Error).message} onRetry={() => void refetch()} /> : <Loading />}
-      </>
-    );
-  }
-
-  const total = data.routeLengthKm || data.segments.reduce((s, x) => s + x.lengthKm, 0) || 1;
-  const routeBadness = data.segments.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / total;
-
   return (
     <>
       <PageHeader
         title="Peta Jalan Kamera AI (prototipe)"
-        subtitle="Bahaya jalan dari CPP KM 33 ke Jetty, dari kamera berbasis AI di truk paling depan dan paling belakang. Kondisi tiap ruas jalan dihitung dari bahaya ini, lalu dipakai untuk memperkirakan umur ban dan kecepatan aman. Data simulasi, bukan kamera langsung."
+        subtitle="Dua rute dipetakan kamera berbasis AI di truk paling depan dan paling belakang: rute hauling CPP KM 33 ke Jetty (truk hauling) dan rute in-pit site Indexim Coalindo (HD785). Kondisi tiap ruas dihitung dari bahaya, lalu dipakai untuk perkiraan umur ban dan kecepatan aman. Data simulasi, bukan kamera langsung."
         actions={
           <button
             onClick={() => recompute.mutate()}
@@ -37,32 +23,61 @@ export function RoadMap() {
         }
       />
 
+      <RouteMapSection area="haul" title="Rute hauling — CPP KM 33 ke Jetty" recomputed={recompute.isSuccess} />
+      <div className="mt-8">
+        <RouteMapSection area="site" title="Rute in-pit — site Indexim Coalindo (HD785)" recomputed={recompute.isSuccess} />
+      </div>
+    </>
+  );
+}
+
+function RouteMapSection({ area, title, recomputed }: { area: MapArea; title: string; recomputed: boolean }) {
+  const { data, isLoading, error, refetch } = useRoadMap(area);
+
+  if (isLoading || !data) {
+    return (
+      <Card>
+        <h2 className="mb-3 font-semibold text-slate-800">{title}</h2>
+        {error ? <ErrorState message={(error as Error).message} onRetry={() => void refetch()} /> : <Loading />}
+      </Card>
+    );
+  }
+
+  const total = data.routeLengthKm || data.segments.reduce((s, x) => s + x.lengthKm, 0) || 1;
+  const routeBadness = data.segments.reduce((s, x) => s + x.lengthKm * (1 - x.conditionScore), 0) / total;
+
+  return (
+    <>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
       <Card>
         <HazardMap data={data} />
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
           <Badge tone="slate">prototipe, data simulasi kamera AI</Badge>
-          <span>bukan kamera langsung. {data.hazards.length} bahaya terdeteksi. Terakhir diperbarui {new Date(data.lastUpdated).toLocaleString("id-ID")}</span>
+          <span>
+            bukan kamera langsung. {data.hazards.length} bahaya terdeteksi. Terakhir diperbarui{" "}
+            {new Date(data.lastUpdated).toLocaleString("id-ID")}
+          </span>
         </div>
       </Card>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <Stat
             label="Tingkat kerusakan jalan"
             value={formatPersen(routeBadness)}
             hint={
               <>
-                dihitung dari bahaya kamera AI, dipakai untuk perkiraan umur ban
-                <InfoTip text="Rata-rata kerusakan sepanjang rute, ditimbang dengan panjang tiap ruas. Skornya kini berasal dari bahaya kamera AI, bukan diisi manual. Klik 'Hitung ulang dari kamera' untuk memperbarui dan perkiraan umur ban ikut berubah." />
+                dihitung dari bahaya kamera AI
+                <InfoTip text="Rata-rata kerusakan sepanjang rute, ditimbang dengan panjang tiap ruas. Skornya berasal dari bahaya kamera AI, bukan diisi manual." />
               </>
             }
           />
-          {recompute.isSuccess && <p className="mt-2 text-xs text-emerald-600">Kondisi jalan diperbarui dari bahaya</p>}
+          {recomputed && <p className="mt-2 text-xs text-emerald-600">Kondisi jalan diperbarui dari bahaya</p>}
         </Card>
 
         <Card className="lg:col-span-2 overflow-hidden p-0">
           <div className="border-b border-slate-200 px-5 py-3">
-            <h2 className="font-semibold text-slate-800">Kondisi tiap ruas jalan</h2>
+            <h3 className="font-semibold text-slate-800">Kondisi tiap ruas jalan</h3>
             <p className="text-xs text-slate-400">Hanya tampilan. Bersumber dari peta kamera AI, bukan diisi manual.</p>
           </div>
           <table className="w-full text-sm">

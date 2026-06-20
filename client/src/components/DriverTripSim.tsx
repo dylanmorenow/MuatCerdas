@@ -1,14 +1,25 @@
-// Revisi F3 — simulasi perjalanan driver: deteksi overspeed (vs Vmax aman Modul C) & melewati
-// zona bahaya (peta LiDAR) → kirim DriverEvent (lewat antrean offline). DISIMULASIKAN: tak ada
-// GPS/spidometer live di kabin; mewakili apa yang akan dikirim perangkat kelak.
+// Revisi F3 + akhir — simulasi perjalanan driver: deteksi overspeed, melewati zona bahaya (dari
+// peta kamera AI rute unit ini: hauling KM33→Jetty atau in-pit site), & rem mendadak → kirim
+// DriverEvent (lewat antrean offline). DISIMULASIKAN; mewakili apa yang dikirim perangkat kelak.
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hazardLabel } from "@muatcerdas/shared";
-import { useRoadMap } from "../api/roadmap";
+import { hazardLabel, type HazardType } from "@muatcerdas/shared";
 import { useOfflineQueue } from "../lib/useOfflineQueue";
 
-export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: number | null }) {
-  const { data: roadMap } = useRoadMap();
+interface SimHazard {
+  type: HazardType;
+  positionKm: number;
+}
+
+export function DriverTripSim({
+  unitId,
+  vmaxKmh,
+  hazards,
+}: {
+  unitId: string;
+  vmaxKmh: number | null;
+  hazards: SimHazard[];
+}) {
   const { enqueue } = useOfflineQueue();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -28,8 +39,7 @@ export function DriverTripSim({ unitId, vmaxKmh }: { unitId: string; vmaxKmh: nu
       msgs.push(`${r.sent ? "Terkirim" : "Antre"} (ngebut): ${detail}`);
     }
 
-    // 2) Hazard: melewati salah satu bahaya pada peta kamera AI.
-    const hazards = roadMap?.hazards ?? [];
+    // 2) Hazard: melewati salah satu bahaya pada peta kamera AI rute unit ini.
     if (hazards.length) {
       const h = hazards[Math.floor(Math.random() * hazards.length)]!;
       const detail = `Melewati ${hazardLabel(h.type)} di KM ${h.positionKm.toFixed(1)}`;

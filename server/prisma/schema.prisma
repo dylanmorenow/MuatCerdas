@@ -50,6 +50,7 @@ model RoadSegment {
   conditionScore    Float // 0..1
   avgSpeedLoadedKmh Float
   avgSpeedEmptyKmh  Float
+  area              String @default("haul") // "haul" = KM33→Jetty (truk hauling) | "site" = in-pit (HD785)
 
   exposures TripSegmentExposure[]
   hazards   RoadHazard[]

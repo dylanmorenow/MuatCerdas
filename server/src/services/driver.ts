@@ -40,8 +40,9 @@ export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit) throw new Error(`Unit '${unitId}' tak ditemukan`);
 
-  const [speedOverview, roadMap] = await Promise.all([getSpeedOverview(), getRoadMap()]);
   const isHaul = unit.category === "haul_truck";
+  // HD785 berada di rute in-pit (site), bukan rute hauling KM33→Jetty.
+  const [speedOverview, roadMap] = await Promise.all([getSpeedOverview(), getRoadMap(isHaul ? "haul" : "site")]);
 
   const speedRow = isHaul
     ? speedOverview.units.find((u) => u.id === unitId)

@@ -69,6 +69,28 @@ const SEGMENTS = [
   { id: "SEG-5", name: "Aspal Jetty", surface: "sealed", lengthKm: 5, conditionScore: 0.85, loaded: 35, empty: 55 },
 ] as const;
 
+// Rute in-pit site Indexim Coalindo (open-pit) untuk HD785 (~8 km): loading point → disposal.
+const SITE_SEGMENTS = [
+  { id: "SITE-1", name: "Loading Point (Pit)", surface: "rock", lengthKm: 1.5, conditionScore: 0.4, loaded: 12, empty: 20 },
+  { id: "SITE-2", name: "Ramp Pit", surface: "rock", lengthKm: 1.5, conditionScore: 0.35, loaded: 10, empty: 18 },
+  { id: "SITE-3", name: "Jalan In-Pit", surface: "laterite", lengthKm: 2, conditionScore: 0.45, loaded: 15, empty: 25 },
+  { id: "SITE-4", name: "Simpang Disposal", surface: "laterite", lengthKm: 1.5, conditionScore: 0.4, loaded: 14, empty: 24 },
+  { id: "SITE-5", name: "Area Disposal", surface: "rock", lengthKm: 1.5, conditionScore: 0.5, loaded: 12, empty: 22 },
+] as const;
+
+type SegDef = { id: string; name: string; surface: string; lengthKm: number; conditionScore: number; loaded: number; empty: number };
+function segmentRow(s: SegDef) {
+  return {
+    id: s.id,
+    name: s.name,
+    surface: s.surface,
+    lengthKm: s.lengthKm,
+    conditionScore: s.conditionScore,
+    avgSpeedLoadedKmh: s.loaded,
+    avgSpeedEmptyKmh: s.empty,
+  };
+}
+
 const ROUTE_KM = SEGMENTS.reduce((s, x) => s + x.lengthKm, 0);
 // Keburukan jalan rute terbobot panjang: Σ len*(1-cond)/Σlen.
 const ROUTE_BADNESS =
@@ -167,17 +189,12 @@ async function main(): Promise<void> {
     data: operators.map((o) => ({ id: o.id, name: o.name, shift: o.shift })),
   });
 
-  // — RoadSegment —
+  // — RoadSegment — dua rute: "haul" (KM33→Jetty) & "site" (in-pit Indexim untuk HD785).
   await prisma.roadSegment.createMany({
-    data: SEGMENTS.map((s) => ({
-      id: s.id,
-      name: s.name,
-      surface: s.surface,
-      lengthKm: s.lengthKm,
-      conditionScore: s.conditionScore,
-      avgSpeedLoadedKmh: s.loaded,
-      avgSpeedEmptyKmh: s.empty,
-    })),
+    data: [
+      ...SEGMENTS.map((s) => ({ ...segmentRow(s), area: "haul" })),
+      ...SITE_SEGMENTS.map((s) => ({ ...segmentRow(s), area: "site" })),
+    ],
   });
 
   // — RoadHazard (F3): bahaya "device LiDAR" (SIMULASI) sepanjang rute. Jumlah/severity dikalibrasi
@@ -190,41 +207,44 @@ async function main(): Promise<void> {
     sealed: ["washboard", "spillage"],
   };
   const hazardRows: Row[] = [];
-  let segStartKm = 0;
-  for (const s of SEGMENTS) {
-    const pool = HAZARD_BY_SURFACE[s.surface] ?? HAZARD_TYPES;
-    const targetSum = ((0.98 - s.conditionScore) / 0.85) * s.lengthKm; // utk dekati cond asli
-    let sum = 0;
-    let n = 0;
-    const segHazards: HazardLike[] = [];
-    while (sum < targetSum && n < 14) {
-      const type = rng.pick(pool);
-      const severity = Number(clamp(rng.gaussian(0.7, 0.15), 0.3, 1).toFixed(2));
-      // Perkiraan lebar jalan yang tertutup bahaya (0..1). Mendesak bila parah & menutupi
-      // sebagian besar jalan → perlu tindakan segera (ADMIN-2).
-      const coveragePct = Number(clamp(rng.gaussian(0.4, 0.22), 0.05, 1).toFixed(2));
-      const urgent = severity >= 0.8 && coveragePct >= 0.6;
-      segHazards.push({ type, segmentId: s.id, severity });
-      hazardRows.push({
-        id: `HZ-${s.id}-${String(n + 1).padStart(2, "0")}`,
-        type,
-        segmentId: s.id,
-        positionKm: Number((segStartKm + rng.range(0.3, s.lengthKm - 0.3)).toFixed(1)),
-        severity,
-        coveragePct,
-        urgent,
-        detectedAt: daysBefore(SEED_TODAY, rng.int(0, 6)),
-        source: "camera_ai",
+  const routes: readonly (readonly SegDef[])[] = [SEGMENTS, SITE_SEGMENTS];
+  for (const route of routes) {
+    let segStartKm = 0;
+    for (const s of route) {
+      const pool = HAZARD_BY_SURFACE[s.surface] ?? HAZARD_TYPES;
+      const targetSum = ((0.98 - s.conditionScore) / 0.85) * s.lengthKm; // utk dekati cond asli
+      let sum = 0;
+      let n = 0;
+      const segHazards: HazardLike[] = [];
+      while (sum < targetSum && n < 14) {
+        const type = rng.pick(pool);
+        const severity = Number(clamp(rng.gaussian(0.7, 0.15), 0.3, 1).toFixed(2));
+        // Perkiraan lebar jalan yang tertutup bahaya (0..1). Mendesak bila parah & menutupi
+        // sebagian besar jalan → perlu tindakan segera (ADMIN-2).
+        const coveragePct = Number(clamp(rng.gaussian(0.4, 0.22), 0.05, 1).toFixed(2));
+        const urgent = severity >= 0.8 && coveragePct >= 0.6;
+        segHazards.push({ type, segmentId: s.id, severity });
+        hazardRows.push({
+          id: `HZ-${s.id}-${String(n + 1).padStart(2, "0")}`,
+          type,
+          segmentId: s.id,
+          positionKm: Number((segStartKm + rng.range(0.3, Math.max(0.4, s.lengthKm - 0.3))).toFixed(1)),
+          severity,
+          coveragePct,
+          urgent,
+          detectedAt: daysBefore(SEED_TODAY, rng.int(0, 6)),
+          source: "camera_ai",
+        });
+        sum += hazardSeverityWeight(type) * severity;
+        n++;
+      }
+      // conditionScore DB = turunan dari bahaya (bukan konstanta/slider manual).
+      await prisma.roadSegment.update({
+        where: { id: s.id },
+        data: { conditionScore: conditionScoreFromHazards(segHazards, s.lengthKm) },
       });
-      sum += hazardSeverityWeight(type) * severity;
-      n++;
+      segStartKm += s.lengthKm;
     }
-    // conditionScore DB = turunan dari bahaya (bukan konstanta/slider manual).
-    await prisma.roadSegment.update({
-      where: { id: s.id },
-      data: { conditionScore: conditionScoreFromHazards(segHazards, s.lengthKm) },
-    });
-    segStartKm += s.lengthKm;
   }
   await insertChunked(hazardRows, (c) => prisma.roadHazard.createMany({ data: c as never }));
 
@@ -585,7 +605,7 @@ async function main(): Promise<void> {
     "  haul_truck (Scania/Volvo, ban)": haul,
     "  pit_dumper (HD785, payload)": dump,
     Operator: operators.length,
-    RoadSegment: SEGMENTS.length,
+    "RoadSegment (haul + site)": SEGMENTS.length + SITE_SEGMENTS.length,
     TireRecord: tires,
     TripLog: trips,
     TripSegmentExposure: exposures,

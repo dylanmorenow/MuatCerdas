@@ -55,17 +55,25 @@ export function pickMappers(haulUnitIds: string[]): { leadUnitId: string | null;
  * Batas integrasi (FR-0004-7): adapter sumber peta. Implementasi membaca RoadSegment + RoadHazard
  * (mewakili keluaran LiDAR). Adapter LiDAR nyata dapat menggantikan tanpa mengubah Modul A/C.
  */
+export type MapArea = "haul" | "site";
+
 export interface RoadMapSource {
-  read(): Promise<RoadMapData>;
+  read(area: MapArea): Promise<RoadMapData>;
 }
 
 export const seededRoadMapSource: RoadMapSource = {
-  async read() {
-    const [segments, hazards, haulUnits] = await Promise.all([
-      prisma.roadSegment.findMany({ orderBy: { id: "asc" } }),
-      prisma.roadHazard.findMany({ orderBy: { positionKm: "asc" } }),
-      prisma.unit.findMany({ where: { category: "haul_truck" }, select: { id: true }, orderBy: { id: "asc" } }),
+  async read(area: MapArea) {
+    // Truk pemeta kamera AI: rute hauling dipetakan truk hauling; rute site dipetakan HD785.
+    const mapperCategory = area === "site" ? "pit_dumper" : "haul_truck";
+    const [segments, mapperUnits] = await Promise.all([
+      prisma.roadSegment.findMany({ where: { area }, orderBy: { id: "asc" } }),
+      prisma.unit.findMany({ where: { category: mapperCategory }, select: { id: true }, orderBy: { id: "asc" } }),
     ]);
+    const segIds = segments.map((s) => s.id);
+    const hazards = await prisma.roadHazard.findMany({
+      where: { segmentId: { in: segIds } },
+      orderBy: { positionKm: "asc" },
+    });
     const countBySeg = new Map<string, number>();
     for (const h of hazards) countBySeg.set(h.segmentId, (countBySeg.get(h.segmentId) ?? 0) + 1);
 
@@ -89,15 +97,15 @@ export const seededRoadMapSource: RoadMapSource = {
         urgent: h.urgent,
       })),
       routeLengthKm: segments.reduce((s, x) => s + x.lengthKm, 0),
-      mappers: pickMappers(haulUnits.map((u) => u.id)),
+      mappers: pickMappers(mapperUnits.map((u) => u.id)),
       lastUpdated: MAP_LAST_UPDATED,
       source: "simulasi",
     };
   },
 };
 
-export async function getRoadMap(): Promise<RoadMapData> {
-  return seededRoadMapSource.read();
+export async function getRoadMap(area: MapArea = "haul"): Promise<RoadMapData> {
+  return seededRoadMapSource.read(area);
 }
 
 /**

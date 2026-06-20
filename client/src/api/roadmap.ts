@@ -31,11 +31,16 @@ export interface RoadMapData {
   source: string;
 }
 
-export function useRoadMap() {
-  return useQuery({ queryKey: ["roadmap"], queryFn: () => apiGet<RoadMapData>("/api/roadmap") });
+export type MapArea = "haul" | "site";
+
+export function useRoadMap(area: MapArea = "haul") {
+  return useQuery({
+    queryKey: ["roadmap", area],
+    queryFn: () => apiGet<RoadMapData>(`/api/roadmap?area=${area}`),
+  });
 }
 
-/** Recompute conditionScore dari bahaya LiDAR (admin). conditionScore menyetir Modul A → invalidasi terkait. */
+/** Recompute conditionScore dari bahaya kamera AI (admin). conditionScore menyetir Modul A → invalidasi terkait. */
 export function useRecomputeRoadmap() {
   const qc = useQueryClient();
   return useMutation({

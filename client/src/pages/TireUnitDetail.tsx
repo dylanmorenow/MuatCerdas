@@ -68,21 +68,30 @@ export function TireUnitDetail() {
                 <tbody className="divide-y divide-slate-100">
                   {data.attribution.contributions
                     .filter((c) => Math.abs(c.contribution) >= 1)
-                    .map((c) => (
-                      <tr key={c.factor}>
-                        <td className="py-1.5 text-slate-600">{c.factor}</td>
-                        <td className="py-1.5 text-right font-medium text-slate-800">
-                          {formatNumber(c.contribution)} km
-                        </td>
-                        <td className="w-16 py-1.5 text-right text-xs text-slate-400">
-                          {data.attribution.shortfallKm > 0
-                            ? formatPersen(c.contribution / data.attribution.shortfallKm)
-                            : "-"}
-                        </td>
-                      </tr>
-                    ))}
+                    .map((c) => {
+                      const helps = c.contribution < 0; // negatif = lebih baik dari rata-rata → menambah umur
+                      return (
+                        <tr key={c.factor}>
+                          <td className="py-1.5 text-slate-600">{c.factor}</td>
+                          <td className={`py-1.5 text-right font-medium ${helps ? "text-emerald-600" : "text-slate-800"}`}>
+                            {formatNumber(c.contribution)} km
+                            {helps && <span className="ml-1 text-[11px] font-normal text-emerald-600">(menambah umur)</span>}
+                          </td>
+                          <td className="w-16 py-1.5 text-right text-xs text-slate-400">
+                            {data.attribution.shortfallKm > 0
+                              ? formatPersen(c.contribution / data.attribution.shortfallKm)
+                              : "-"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
+              <p className="mt-2 text-[11px] text-slate-400">
+                Angka positif = faktor itu mengurangi umur ban (penyebab keausan). Angka negatif (hijau) = faktor itu
+                lebih baik dari rata-rata armada, jadi justru menambah umur. Contoh: muatan minus berarti unit ini
+                muatannya lebih ringan dari rata-rata.
+              </p>
             </Card>
 
             {/* Fitur + koefisien model */}
@@ -112,6 +121,10 @@ export function TireUnitDetail() {
                   <Row label="Tiap 1 tingkat kerusakan jalan" value={`${formatNumber(data.regressionModel.coefficients.road)} km`} />
                   <Row label="Tiap 1 poin gaya operator" value={`${formatNumber(data.regressionModel.coefficients.operator)} km`} />
                 </dl>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  Angka negatif di sini wajar: itu laju, bukan nilai. Maksudnya makin besar faktornya, makin pendek umur
+                  ban. Contoh: tiap muatan naik 1 tingkat, umur ban berkurang sebesar angka itu.
+                </p>
               </Card>
             </div>
           </div>

@@ -60,8 +60,8 @@ export function TireList() {
                     <InfoTip text="Perkiraan total umur ban dikurangi jarak yang sudah ditempuh. Juga ditampilkan kira-kira berapa kali angkut (cycle) lagi ban bisa dipakai. Satu cycle pulang-pergi sekitar 70 km." />
                   </th>
                   <th className="px-4 py-3 font-medium">
-                    Risiko ban (di luar jarak)
-                    <InfoTip text="Perkiraan pengurangan umur ban karena kondisi jalan dan gaya berkendara, di luar jarak tempuh biasa. Dikelompokkan: Grade A risiko sangat tinggi, B tinggi, C sedang." />
+                    Estimasi pengurangan umur (asumsi)
+                    <InfoTip text="Perkiraan KASAR berapa km umur ban berkurang karena bahaya jalan dan gaya berkendara, di luar keausan akibat jarak tempuh biasa. Dihitung dari asumsi: tiap kejadian Grade A mengurangi ~1.200 km, Grade B ~600 km, Grade C ~250 km." />
                   </th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
@@ -80,9 +80,13 @@ export function TireList() {
                       <div className="text-[11px] font-normal text-slate-400">≈ {formatNumber(u.cyclesRemaining)} cycle lagi</div>
                     </td>
                     <td className="px-4 py-3">
-                      <GradeBadge grade={u.riskGrade} />
-                      {u.extraWearKm > 0 && (
-                        <div className="mt-0.5 text-[11px] text-slate-400">≈ {formatNumber(u.extraWearKm)} km lebih cepat aus</div>
+                      {u.extraWearKm > 0 ? (
+                        <>
+                          <div className="font-medium text-slate-800">≈ −{formatNumber(u.extraWearKm)} km</div>
+                          <div className="mt-1"><GradeBadge grade={u.riskGrade} /></div>
+                        </>
+                      ) : (
+                        <GradeBadge grade={u.riskGrade} />
                       )}
                     </td>
                     <td className="px-4 py-3">
