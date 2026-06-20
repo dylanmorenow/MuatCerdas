@@ -30,7 +30,10 @@ function bandColor(midpointKg: number): string {
 }
 
 export function PayloadAnalytics() {
-  const [filter, setFilter] = useState<PayloadFilter>({});
+  // Pilih satu mode saja: per unit ATAU per operator, supaya data tidak tercampur.
+  const [mode, setMode] = useState<"unit" | "operator">("unit");
+  const [selected, setSelected] = useState("");
+  const filter: PayloadFilter = mode === "unit" ? { unitId: selected || undefined } : { operatorId: selected || undefined };
   const { data, isLoading, error, refetch } = usePayloadAnalytics(filter);
 
   return (
@@ -63,44 +66,49 @@ export function PayloadAnalytics() {
 
       {data && (
         <>
-          {/* Filter */}
+          {/* Filter — pilih SATU mode: per unit atau per operator (tidak bisa keduanya) */}
           <div className="mb-5 flex flex-wrap items-end gap-3">
             <label className="block">
-              <span className="mb-1 block text-xs text-slate-500">Unit (HD785)</span>
+              <span className="mb-1 block text-xs text-slate-500">Tampilkan berdasarkan</span>
               <select
-                value={filter.unitId ?? ""}
-                onChange={(e) => setFilter((f) => ({ ...f, unitId: e.target.value || undefined }))}
+                value={mode}
+                onChange={(e) => {
+                  setMode(e.target.value as "unit" | "operator");
+                  setSelected("");
+                }}
                 className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               >
-                <option value="">Semua unit</option>
-                {data.units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.id}
-                  </option>
-                ))}
+                <option value="unit">Per unit</option>
+                <option value="operator">Per operator</option>
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs text-slate-500">Operator</span>
+              <span className="mb-1 block text-xs text-slate-500">{mode === "unit" ? "Unit (HD785)" : "Operator"}</span>
               <select
-                value={filter.operatorId ?? ""}
-                onChange={(e) => setFilter((f) => ({ ...f, operatorId: e.target.value || undefined }))}
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
                 className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               >
-                <option value="">Semua operator</option>
-                {data.operators.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
+                <option value="">{mode === "unit" ? "Semua unit" : "Semua operator"}</option>
+                {mode === "unit"
+                  ? data.units.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.id}
+                      </option>
+                    ))
+                  : data.operators.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
               </select>
             </label>
-            {(filter.unitId || filter.operatorId) && (
+            {selected && (
               <button
-                onClick={() => setFilter({})}
+                onClick={() => setSelected("")}
                 className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
               >
-                Reset filter
+                Reset
               </button>
             )}
           </div>

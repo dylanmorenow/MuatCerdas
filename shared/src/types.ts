@@ -138,6 +138,9 @@ export interface SpeedParams {
   fixedTimeHours: number;
   oneWayKm: number;
   dailyTargetTon: number;
+  // — Armada hauling (editable di layar Kecepatan) —
+  haulUnitCount: number; // jumlah unit hauling (realita lapangan)
+  haulPayloadCapacityTon: number; // kapasitas muatan per unit (2 trailer), ton
 }
 
 /** Entri katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. */

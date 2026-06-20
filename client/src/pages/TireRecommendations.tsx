@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatRupiah, formatNumber } from "@muatcerdas/shared";
 import { useTireRecommendations, type TireRecommendation } from "../api/tires";
@@ -48,7 +49,18 @@ export function TireRecommendations() {
             <Stat label="Unit terdampak" value={formatNumber(new Set(data.map((r) => r.unitId)).size)} />
           </div>
 
-          <div className="space-y-5">
+          {/* Ringkasan jumlah per grade — supaya semua grade jelas terlihat */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500">Jumlah per grade:</span>
+            {GRADES.map((g) => (
+              <span key={g} className="inline-flex items-center gap-1.5">
+                <GradeBadge grade={g} />
+                <span className="text-sm font-medium text-slate-700">{data.filter((r) => r.grade === g).length}</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="space-y-3">
             {GRADES.map((g) => {
               const rows = data.filter((r) => r.grade === g);
               if (rows.length === 0) return null;
@@ -96,12 +108,19 @@ function GradeTable({
   onDone: (r: TireRecommendation) => void;
   busy: boolean;
 }) {
+  const [open, setOpen] = useState(true);
   return (
     <Card className="overflow-hidden p-0">
-      <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 border-b border-slate-200 px-5 py-3 text-left hover:bg-slate-50"
+      >
+        <span className="text-slate-400">{open ? "▾" : "▸"}</span>
         <GradeBadge grade={grade} />
         <span className="text-sm text-slate-500">{rows.length} tindakan</span>
-      </div>
+        <span className="ml-auto text-xs text-slate-400">{open ? "klik untuk tutup" : "klik untuk buka"}</span>
+      </button>
+      {open && (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -145,6 +164,7 @@ function GradeTable({
           </tbody>
         </table>
       </div>
+      )}
     </Card>
   );
 }

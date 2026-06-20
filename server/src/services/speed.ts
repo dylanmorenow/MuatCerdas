@@ -68,6 +68,8 @@ export interface Hd785SpeedRow {
   vmaxSafeTravelKmh: number;
   overTarget: boolean;
   reason: string;
+  /** Kondisi jalan zona site in-pit (memengaruhi kecepatan HD785). */
+  zoneCondition: string;
 }
 
 export interface SpeedOverview {
@@ -102,6 +104,8 @@ export interface SpeedModelInput {
   catalog: Map<string, number>;
   haulUnits: SpeedUnitInput[];
   hd785Units: SpeedUnitInput[];
+  /** Override jumlah unit hauling utk rantai produksi (item 2). Default = haulUnits.length. */
+  haulUnitCount?: number;
 }
 
 // ——————————————————————————————————————————————————————————————
@@ -195,6 +199,7 @@ export function buildHd785Row(args: {
     vmaxSafeTravelKmh: roundKmh(vTravel),
     overTarget: unit.payloadKg > unit.targetKg,
     reason: reasonText(payloadT, targetT, vTravel),
+    zoneCondition: "normal", // diisi getSpeedOverview dari kondisi jalan zona "site" (item 7)
   };
 }
 
@@ -210,8 +215,8 @@ export function computeSpeedModel(input: SpeedModelInput): SpeedOverview {
   const { params, catalog, haulUnits, hd785Units } = input;
   const vmKmh = workAverageSpeedKmh(params.distancePerShiftKm, params.workHoursPerShift);
 
-  // Representatif armada (haul) untuk rantai produksi.
-  const unitCount = haulUnits.length;
+  // Representatif armada (haul) untuk rantai produksi. Jumlah unit bisa dioverride (item 2).
+  const unitCount = input.haulUnitCount ?? haulUnits.length;
   const payloadPerUnitTon = mean(haulUnits.map((u) => u.payloadKg / 1000), 0);
   const avgTareKg = mean(haulUnits.map((u) => u.tareKg), 0);
   const avgCatalog = mean(haulUnits.map((u) => catalogFor(catalog, u.tireModel)), DEFAULT_TKPH_FALLBACK);
@@ -326,20 +331,24 @@ async function operatorMassKgByUnit(): Promise<Map<string, number>> {
   return new Map(Object.values(latest).map((r) => [r.unitId, r.totalT * 1000]));
 }
 
-/** Muatan terkini per unit haul = lapor operator bila ada; jika tidak, payloadIdx × ratedPayloadKg. */
-async function haulUnitInputs(massByUnit: Map<string, number>): Promise<SpeedUnitInput[]> {
+/**
+ * Muatan per unit haul. Bila kapasitas armada di-set (item 2: 120 t/2 trailer), pakai itu sebagai
+ * muatan & target semua unit hauling (realita lapangan). Bila tidak, pakai lapor operator/rated.
+ */
+async function haulUnitInputs(massByUnit: Map<string, number>, capacityTon?: number): Promise<SpeedUnitInput[]> {
   const [units, tripAvg] = await Promise.all([
     prisma.unit.findMany({ where: { category: "haul_truck" } }),
     prisma.tripLog.groupBy({ by: ["unitId"], _avg: { payloadIdx: true } }),
   ]);
   const idxByUnit = new Map(tripAvg.map((g) => [g.unitId, g._avg.payloadIdx ?? 1]));
+  const capKg = capacityTon && capacityTon > 0 ? capacityTon * 1000 : null;
   return units.map((u) => ({
     id: u.id,
     model: u.model,
     tireModel: u.tireModel,
     tareKg: u.tareKg,
-    payloadKg: massByUnit.get(u.id) ?? (idxByUnit.get(u.id) ?? 1) * u.ratedPayloadKg,
-    targetKg: u.ratedPayloadKg,
+    payloadKg: capKg ?? massByUnit.get(u.id) ?? (idxByUnit.get(u.id) ?? 1) * u.ratedPayloadKg,
+    targetKg: capKg ?? u.ratedPayloadKg,
   }));
 }
 
@@ -388,21 +397,42 @@ function applyZoneCondition(
   };
 }
 
+/** Terapkan kondisi jalan zona "site" → turunkan kecepatan aman HD785 (item 7). */
+function applyHd785ZoneCondition(u: Hd785SpeedRow, condition: RoadOpsCondition): Hd785SpeedRow {
+  const factor = roadOpsSpeedFactor(condition);
+  if (factor >= 1) return { ...u, zoneCondition: condition };
+  return {
+    ...u,
+    vmaxSafeWorkKmh: roundKmh(u.vmaxSafeWorkKmh * factor),
+    vmaxSafeTravelKmh: roundKmh(u.vmaxSafeTravelKmh * factor),
+    zoneCondition: condition,
+    reason: `${u.reason}. Jalan site ${roadOpsConditionLabel(condition).toLowerCase()}, kecepatan diturunkan.`,
+  };
+}
+
 export async function getSpeedOverview(): Promise<SpeedOverview> {
-  const [massByUnit, zoneCond, zoneByUnit] = await Promise.all([
+  const [massByUnit, zoneCond, zoneByUnit, params, catalog] = await Promise.all([
     operatorMassKgByUnit(),
     zoneConditionMap(),
     haulZoneByUnit(),
-  ]);
-  const [params, catalog, haulUnits, hd785Units] = await Promise.all([
     loadSpeedParams(),
     loadCatalog(),
-    haulUnitInputs(massByUnit),
+  ]);
+  const [haulUnits, hd785Units] = await Promise.all([
+    haulUnitInputs(massByUnit, params.haulPayloadCapacityTon),
     hd785UnitInputs(massByUnit),
   ]);
-  const overview = computeSpeedModel({ params, catalog, haulUnits, hd785Units });
+  const overview = computeSpeedModel({
+    params,
+    catalog,
+    haulUnits,
+    hd785Units,
+    haulUnitCount: params.haulUnitCount,
+  });
   // Kondisi jalan per zona menyetir kecepatan aman tiap unit (selain muatan).
   overview.units = overview.units.map((u) => applyZoneCondition(u, zoneByUnit, zoneCond));
+  const siteCondition = (zoneCond.site as RoadOpsCondition) ?? "normal";
+  overview.hd785 = overview.hd785.map((u) => applyHd785ZoneCondition(u, siteCondition));
   return overview;
 }
 

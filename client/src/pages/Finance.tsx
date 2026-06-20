@@ -100,23 +100,12 @@ export function Finance() {
           </Card>
 
           <Card>
-            <h2 className="mb-3 font-semibold text-slate-800">Biaya platform</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField label="Biaya investasi" unit="Rp" value={form.capexIdr} onChange={(v) => set("capexIdr", v)} hint={formatRupiah(form.capexIdr)} />
-              <NumberField label="Biaya operasional per tahun" unit="Rp" value={form.opexAnnualIdr} onChange={(v) => set("opexAnnualIdr", v)} hint={formatRupiah(form.opexAnnualIdr)} />
-            </div>
-          </Card>
-
-          <Card>
             <h2 className="mb-1 font-semibold text-slate-800">
-              Muatan HD785
-              <InfoTip text="Pengatur biaya muatan. Awalnya nol. Isi untuk menghitung biaya akibat muatan kurang atau muatan berlebih." />
+              Muatan berlebih HD785
+              <InfoTip text="Biaya keausan akibat muatan berlebih. Awalnya nol. Isi untuk mengaktifkan." />
             </h2>
             <p className="mb-3 text-xs text-slate-400">Total tingkat muatan berlebih armada {formatNumber(derived.overloadRateSum, 2)} (dari data).</p>
             <div className="grid grid-cols-2 gap-3">
-              <NumberField label="Biaya BBM per ritase" unit="Rp" value={form.fuelCostPerTripIdr} onChange={(v) => set("fuelCostPerTripIdr", v)} hint={formatRupiah(form.fuelCostPerTripIdr)} />
-              <NumberField label="Ritase per tahun" value={form.tripsPerYear} onChange={(v) => set("tripsPerYear", v)} />
-              <NumberField label="Muatan kurang (%)" unit="0 sampai 1" step={0.01} value={form.underloadPct} onChange={(v) => set("underloadPct", v)} hint={formatPersen(form.underloadPct)} />
               <NumberField label="Biaya keausan akibat muatan berlebih" unit="Rp" value={form.overloadWearCostFactorIdr} onChange={(v) => set("overloadWearCostFactorIdr", v)} hint={formatRupiah(form.overloadWearCostFactorIdr)} />
             </div>
           </Card>
@@ -128,18 +117,7 @@ export function Finance() {
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
             <div className="text-xs uppercase tracking-wide text-emerald-100">Total penghematan per tahun</div>
             <div className="mt-1 text-2xl font-bold text-white">{formatRupiah(summary.annualSavings)}</div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-emerald-100">Balik modal</div>
-                <div className="text-lg font-semibold text-white">
-                  {Number.isFinite(summary.paybackMonths) ? `${formatNumber(summary.paybackMonths, 1)} bulan` : "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-emerald-100">Keuntungan tahun pertama</div>
-                <div className="text-lg font-semibold text-white">{formatPersen(summary.roiYear1)}</div>
-              </div>
-            </div>
+            <div className="mt-1 text-xs text-emerald-50">dari penghematan ban dan biaya muatan berlebih</div>
           </div>
 
           <Card>
@@ -149,7 +127,6 @@ export function Finance() {
               <ResultRow label="Nilai ban yang bisa dihemat per unit" value={formatRupiah(tac.avoidableCostPerUnit)} />
               <ResultRow label="Yang realistis tertangkap per unit" value={formatRupiah(tac.capturedPerUnit)} />
               <ResultRow label="Total penghematan ban se-armada" value={formatRupiah(summary.fleetCaptured)} strong />
-              <ResultRow label="Biaya muatan kurang per tahun" value={formatRupiah(summary.underloadExtraCost)} />
               <ResultRow label="Biaya muatan berlebih per tahun" value={formatRupiah(summary.overloadCost)} />
             </dl>
           </Card>
@@ -170,8 +147,6 @@ export function Finance() {
               <th className="px-4 py-2.5 font-medium">Armada</th>
               <th className="px-4 py-2.5 font-medium">Penghematan ban per tahun</th>
               <th className="px-4 py-2.5 font-medium">Total penghematan per tahun</th>
-              <th className="px-4 py-2.5 font-medium">Balik modal</th>
-              <th className="px-4 py-2.5 font-medium">Untung tahun pertama</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -182,8 +157,6 @@ export function Finance() {
                   <td className="px-4 py-2.5 font-medium text-slate-700">{fs} unit{fs === form.fleetSize ? " (saat ini)" : ""}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatRupiah(s.fleetCaptured)}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatRupiah(s.annualSavings)}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{Number.isFinite(s.paybackMonths) ? `${formatNumber(s.paybackMonths, 1)} bulan` : "-"}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{formatPersen(s.roiYear1)}</td>
                 </tr>
               );
             })}

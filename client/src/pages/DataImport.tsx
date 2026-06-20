@@ -3,6 +3,7 @@ import { formatNumber, formatTon } from "@muatcerdas/shared";
 import { useInventory, useImport } from "../api/data";
 import { downloadCsv } from "../lib/export";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
+import { FleetOperatorPanel } from "../components/FleetOperatorPanel";
 
 interface EntityDef {
   key: string;
@@ -147,6 +148,8 @@ export function DataImport() {
       </div>
 
       {/* Inventory */}
+      <FleetOperatorPanel />
+
       <h2 className="mb-3 mt-6 font-semibold text-slate-800">Data saat ini</h2>
       {inv.isLoading && <Loading />}
       {inv.error && <ErrorState message={(inv.error as Error).message} onRetry={() => void inv.refetch()} />}

@@ -4,13 +4,15 @@
 import { ROAD_OPS_CONDITIONS, type RoadOpsCondition } from "@muatcerdas/shared";
 import { prisma } from "../db";
 
-export const ZONES = ["cpp", "tengah", "jetty"] as const;
+// cpp/tengah/jetty = rute hauling (truk hauling). site = rute in-pit (HD785).
+export const ZONES = ["cpp", "tengah", "jetty", "site"] as const;
 export type Zone = (typeof ZONES)[number];
 
 export const ZONE_LABEL: Record<string, string> = {
-  cpp: "Dekat CPP (KM 33)",
-  tengah: "Tengah rute",
-  jetty: "Dekat Jetty",
+  cpp: "Hauling — dekat CPP (KM 33)",
+  tengah: "Hauling — tengah rute",
+  jetty: "Hauling — dekat Jetty",
+  site: "Site in-pit Indexim (HD785)",
 };
 
 export interface ZoneConditionRow {

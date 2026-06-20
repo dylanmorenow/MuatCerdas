@@ -51,6 +51,48 @@ export function TireUnitDetail() {
             <Stat label="Jarak tempuh ban sekarang" value={`${formatNumber(data.features.currentKm)} km`} hint="dari perkiraan usia ban" />
           </div>
 
+          {/* Item 3 — umur ban terpakai = jarak nyata + pengurangan faktor eksternal */}
+          {(() => {
+            const realKm = Math.max(0, Math.round(data.features.currentKm));
+            const externalKm = Math.round(data.attribution.shortfallKm);
+            const totalKm = realKm + externalKm;
+            const realPct = totalKm > 0 ? (realKm / totalKm) * 100 : 100;
+            return (
+              <Card className="mb-5">
+                <h2 className="mb-1 font-semibold text-slate-800">
+                  Umur ban terpakai = jarak nyata + faktor eksternal
+                  <InfoTip text="Umur ban tidak cuma habis karena jarak. Faktor eksternal (muatan, kondisi jalan, gaya operator) ikut 'memakan' umur ban. Contoh: jika ban baru menempuh 30 km tapi faktor eksternal setara 20 km, maka umur yang sudah terpakai setara 50 km." />
+                </h2>
+                <p className="mb-3 text-xs text-slate-400">Pengurangan faktor eksternal dirinci di bawah pada "Penyebab keausan ban".</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Jarak tempuh nyata</div>
+                    <div className="mt-0.5 text-xl font-bold text-kpp-blue">{formatNumber(realKm)} km</div>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Pengurangan faktor eksternal</div>
+                    <div className={`mt-0.5 text-xl font-bold ${externalKm >= 0 ? "text-red-600" : "text-emerald-600"}`}>
+                      {externalKm >= 0 ? "+" : ""}{formatNumber(externalKm)} km
+                    </div>
+                    <div className="text-[11px] text-slate-400">muatan, jalan, operator</div>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Total umur terpakai (setara)</div>
+                    <div className="mt-0.5 text-xl font-bold text-slate-800">{formatNumber(totalKm)} km</div>
+                  </div>
+                </div>
+                <div className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full bg-kpp-blue" style={{ width: `${Math.min(100, realPct)}%` }} />
+                  <div className="h-full bg-red-400" style={{ width: `${Math.max(0, 100 - realPct)}%` }} />
+                </div>
+                <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+                  <span>jarak nyata</span>
+                  <span>faktor eksternal</span>
+                </div>
+              </Card>
+            );
+          })()}
+
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             {/* Atribusi */}
             <Card className="lg:col-span-2">

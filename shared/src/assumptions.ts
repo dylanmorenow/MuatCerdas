@@ -53,6 +53,8 @@ export const defaultSpeedParams: SpeedParams = {
   fixedTimeHours: 0.5, // ASUMSI: loading+dumping+manuver+antri per siklus
   oneWayKm: 35, // rute CPP KM33 → Jetty (verifikasi, docs/ASSUMPTIONS.md §D)
   dailyTargetTon: 6_000, // ASUMSI sementara (rantai RKAB belum dikunci, §E)
+  haulUnitCount: 95, // jumlah unit hauling (realita lapangan), editable
+  haulPayloadCapacityTon: 120, // kapasitas 2 trailer per unit (ton), editable
 };
 
 /**

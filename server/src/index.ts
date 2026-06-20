@@ -19,6 +19,7 @@ import { roadmapRoutes } from "./routes/roadmap";
 import { massRoutes } from "./routes/mass";
 import { resolvedRoutes } from "./routes/resolved";
 import { zoneRoutes } from "./routes/zones";
+import { fleetRoutes } from "./routes/fleet";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -44,6 +45,7 @@ async function main(): Promise<void> {
   await app.register(massRoutes);
   await app.register(resolvedRoutes);
   await app.register(zoneRoutes);
+  await app.register(fleetRoutes);
 
   // Produksi: server yang sama melayani hasil build client (SPA) + API satu origin.
   const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../client/dist");

@@ -1,21 +1,8 @@
-// Revisi F2 — Mass Monitoring (surveyor). Laporan massa real-time per HD785 (massa + material
-// coal/OB + nama operator excavator) dari input operator, plus alat panduan pemuatan excavator.
-import { useState } from "react";
-import {
-  formatNumber,
-  formatPersen,
-  formatTon,
-  materialLabel,
-  loadingStatus,
-  loadingPolicy,
-  loadingStatusFromBuckets,
-  bucketsTotal,
-  EXCAVATOR_BUCKET_M3,
-  MATERIAL_DENSITY_T_PER_M3,
-} from "@muatcerdas/shared";
+// Pemantauan Muatan (surveyor) — laporan massa real-time per HD785 (massa + material coal/OB +
+// nama operator excavator) dari input operator.
+import { formatNumber, formatTon, materialLabel, loadingStatus } from "@muatcerdas/shared";
 import { useMassMonitoring, useOperatorData, type MassInputRow } from "../api/mass";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
-import { LoadingLight } from "../components/LoadingLight";
 
 const TARGET_KG = 91_000;
 const STATUS_TONE: Record<string, { tone: "amber" | "green" | "red"; label: string }> = {
@@ -107,31 +94,30 @@ export function MassMonitoring() {
             </div>
           </Card>
 
-          {/* Data operator dikelompokkan per jenis */}
-          {opData && opData.groups.length > 0 && (
+          {/* Data operator per jenis — section massa HD785 dihapus (redundan dgn tabel real-time di atas) */}
+          {opData && opData.groups.filter((g) => g.key !== "hd785-mass").length > 0 && (
             <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {opData.groups.map((g) => (
-                <Card key={g.key} className="overflow-hidden p-0">
-                  <div className="border-b border-slate-200 px-5 py-3">
-                    <h2 className="font-semibold text-slate-800">{g.label}</h2>
-                    <p className="text-xs text-slate-400">{g.rows.length} laporan</p>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    <table className="w-full text-sm">
-                      <tbody className="divide-y divide-slate-100">
-                        {g.rows.slice(0, 20).map((r) => (
-                          <OperatorRow key={r.id} r={r} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              ))}
+              {opData.groups
+                .filter((g) => g.key !== "hd785-mass")
+                .map((g) => (
+                  <Card key={g.key} className="overflow-hidden p-0">
+                    <div className="border-b border-slate-200 px-5 py-3">
+                      <h2 className="font-semibold text-slate-800">{g.label}</h2>
+                      <p className="text-xs text-slate-400">{g.rows.length} laporan</p>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <tbody className="divide-y divide-slate-100">
+                          {g.rows.slice(0, 20).map((r) => (
+                            <OperatorRow key={r.id} r={r} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                ))}
             </div>
           )}
-
-          {/* Panduan pemuatan excavator (policy + simulasi) */}
-          <ExcavatorGuidance />
         </>
       )}
     </>
@@ -157,95 +143,3 @@ function OperatorRow({ r }: { r: MassInputRow }) {
   );
 }
 
-const EXCAVATORS = Object.keys(EXCAVATOR_BUCKET_M3);
-const MATERIALS = Object.keys(MATERIAL_DENSITY_T_PER_M3);
-
-/** Alat panduan pemuatan excavator (FR-0002-10/11): policy + simulasi bucket hijau/kuning/merah. */
-function ExcavatorGuidance() {
-  const [excavator, setExcavator] = useState(EXCAVATORS[0] ?? "PC2000");
-  const [material, setMaterial] = useState(MATERIALS[0] ?? "Batubara");
-  const [targetT, setTargetT] = useState(91);
-  const [buckets, setBuckets] = useState<number[]>([]);
-
-  const targetKg = targetT * 1000;
-  const bucketM3 = EXCAVATOR_BUCKET_M3[excavator] ?? 11;
-  const density = MATERIAL_DENSITY_T_PER_M3[material] ?? 0.9;
-  const policy = loadingPolicy({ targetKg, bucketCapacityM3: bucketM3, materialDensityTPerM3: density });
-
-  const total = bucketsTotal(buckets);
-  const status = buckets.length ? loadingStatusFromBuckets(buckets, targetKg) : "green";
-  const pctTarget = total / targetKg;
-
-  return (
-    <div className="mt-5">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Panduan pemuatan excavator</h2>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card>
-          <h3 className="mb-1 font-semibold text-slate-800">
-            Panduan jumlah muatan
-            <InfoTip text="Menghitung berapa kali muat dan rentang target. Ukuran bucket dan kepadatan material adalah asumsi yang bisa diubah." />
-          </h3>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <Field label="Excavator">
-              <select value={excavator} onChange={(e) => setExcavator(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-                {EXCAVATORS.map((x) => (
-                  <option key={x} value={x}>{x}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Material">
-              <select value={material} onChange={(e) => setMaterial(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-                {MATERIALS.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Target (t)">
-              <input type="number" value={targetT} min={1} onChange={(e) => setTargetT(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-            </Field>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <Stat label="Per sekali muat" value={`${formatNumber(policy.perPassKg / 1000, 1)} t`} hint={`${formatNumber(bucketM3, 1)} m³ dikali ${formatNumber(density, 2)} ton/m³`} />
-            <Stat label="Jumlah muat disarankan" value={`${policy.suggestedPasses}×`} hint={`sekitar ${formatNumber(Math.round(policy.effectivePayloadKg / 1000))} t`} />
-            <Stat label="Rentang target" value={`${formatNumber(policy.targetBandKg[0] / 1000, 1)} sampai ${formatNumber(policy.targetBandKg[1] / 1000, 1)} t`} hint="95 sampai 110%" />
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="mb-1 font-semibold text-slate-800">
-            Simulasi pemuatan
-            <InfoTip text="Tambah muatan untuk melihat total berjalan dan indikatornya. Di bawah 95% kuning, 95 sampai 110% hijau, di atas 110% merah." />
-          </h3>
-          <LoadingLight status={status} />
-          <div className="mt-4 flex items-baseline justify-between">
-            <div>
-              <span className="text-2xl font-bold text-slate-800">{formatNumber(total / 1000, 1)}</span>
-              <span className="ml-1 text-sm text-slate-500">t / {formatNumber(targetKg / 1000, 0)} t</span>
-            </div>
-            <span className="text-sm font-medium text-slate-600">{formatPersen(pctTarget)} target</span>
-          </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className={`h-full ${status === "red" ? "bg-red-500" : status === "amber" ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, pctTarget * 100)}%` }} />
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button onClick={() => setBuckets((b) => [...b, policy.perPassKg])} className="rounded-md bg-kpp-green px-3 py-1.5 text-sm font-medium text-white hover:bg-kpp-green/90">
-              Tambah 1 muatan (sekitar {formatNumber(policy.perPassKg / 1000, 1)} t)
-            </button>
-            <button onClick={() => setBuckets([])} className="ml-auto rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100">
-              Ulangi
-            </button>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-slate-500">{label}</span>
-      {children}
-    </label>
-  );
-}

@@ -48,10 +48,9 @@ export interface RoadMapData {
   endLabel: string;
 }
 
-/** Pilih truk pemeta lead/last (murni). */
+/** Pilih truk pemeta (murni). Kamera AI hanya di SATU unit terdepan; tak ada pemeta belakang. */
 export function pickMappers(haulUnitIds: string[]): { leadUnitId: string | null; lastUnitId: string | null } {
-  if (haulUnitIds.length === 0) return { leadUnitId: null, lastUnitId: null };
-  return { leadUnitId: haulUnitIds[0] ?? null, lastUnitId: haulUnitIds[haulUnitIds.length - 1] ?? null };
+  return { leadUnitId: haulUnitIds[0] ?? null, lastUnitId: null };
 }
 
 /**

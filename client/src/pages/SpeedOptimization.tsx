@@ -41,19 +41,20 @@ export function SpeedOptimization() {
   const dirty = JSON.stringify(form) !== JSON.stringify(data.params);
   const set = (k: keyof SpeedParams, v: number) => setForm((f) => (f ? { ...f, [k]: v } : f));
 
-  // — Recompute LIVE (<300 ms) via shared, pakai agregat armada dari server (SR-V5) —
+  // — Recompute LIVE (<300 ms) via shared. Jumlah unit & kapasitas dari input editable (item 2). —
   const fi = data.fleetInputs;
+  const haulPayloadTon = form.haulPayloadCapacityTon;
   const prod = productionSpeed({
     dailyTargetTon: form.dailyTargetTon,
-    payloadPerUnitTon: fi.payloadPerUnitTon,
-    unitCount: fi.unitCount,
+    payloadPerUnitTon: haulPayloadTon,
+    unitCount: form.haulUnitCount,
     effectiveWorkHoursPerDay: form.effectiveWorkHoursPerDay,
     fixedTimeHours: form.fixedTimeHours,
     oneWayKm: form.oneWayKm,
   });
   const repQa = criticalTireLoadTonnes({
     tareKg: fi.avgTareKg,
-    payloadKg: fi.payloadPerUnitTon * 1000,
+    payloadKg: haulPayloadTon * 1000,
     loadShareHeaviestPosition: form.loadShareHeaviestPosition,
   }).qaT;
   const repTkphTire = tkphTire(fi.avgCatalogTkph, form.tempCorrectionFactor, form.siteCorrectionFactor);
@@ -63,11 +64,11 @@ export function SpeedOptimization() {
     vRequiredWorkKmh: prod.vRequiredWorkKmh,
     vmaxSafeWorkKmh: vmaxWork,
     context: {
-      unitCount: fi.unitCount,
+      unitCount: form.haulUnitCount,
       dailyTargetTon: form.dailyTargetTon,
       overload: {
         tkphTireValue: repTkphTire,
-        currentPayloadT: fi.payloadPerUnitTon,
+        currentPayloadT: haulPayloadTon,
         qaAtZeroPayloadT: form.loadShareHeaviestPosition * (fi.avgTareKg / 1000),
         qaSlopePerPayloadT: form.loadShareHeaviestPosition / 2,
       },
@@ -163,10 +164,12 @@ export function SpeedOptimization() {
         <div className="space-y-5 lg:col-span-2">
           <Card>
             <h2 className="mb-3 font-semibold text-slate-800">
-              Target produksi
-              <InfoTip text="Dari target produksi dihitung kecepatan yang dibutuhkan, lewat waktu satu siklus angkut. Rute CPP ke Jetty untuk truk hauling." />
+              Target produksi & armada
+              <InfoTip text="Dari target produksi dihitung kecepatan yang dibutuhkan, lewat waktu satu siklus angkut. Jumlah unit dan kapasitas bisa diubah sesuai realita lapangan." />
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <NumberField label="Jumlah unit hauling" value={form.haulUnitCount} onChange={(v) => set("haulUnitCount", v)} hint="realita lapangan" />
+              <NumberField label="Kapasitas per unit" unit="ton" value={form.haulPayloadCapacityTon} onChange={(v) => set("haulPayloadCapacityTon", v)} hint="2 trailer" />
               <NumberField label="Target harian" unit="ton/hari" value={form.dailyTargetTon} onChange={(v) => set("dailyTargetTon", v)} />
               <NumberField label="Jam kerja efektif" unit="jam/hari" value={form.effectiveWorkHoursPerDay} onChange={(v) => set("effectiveWorkHoursPerDay", v)} />
               <NumberField label="Waktu diam per siklus" unit="jam" step={0.05} value={form.fixedTimeHours} onChange={(v) => set("fixedTimeHours", v)} hint="muat, bongkar, manuver, antre" />
@@ -178,7 +181,7 @@ export function SpeedOptimization() {
               <Mini label="Kecepatan perlu (saat jalan)" value={kmh(prod.vRequiredTravelKmh)} />
               <Mini label="Kecepatan perlu (rata-rata)" value={kmh(prod.vRequiredWorkKmh)} />
               <Mini label="Porsi waktu jalan" value={formatNumber(prod.travelFraction, 3)} />
-              <Mini label="Jumlah unit" value={formatNumber(fi.unitCount, 0)} />
+              <Mini label="Jumlah unit" value={formatNumber(form.haulUnitCount, 0)} />
             </dl>
           </Card>
 

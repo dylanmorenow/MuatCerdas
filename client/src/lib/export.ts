@@ -43,39 +43,37 @@ export async function downloadReportPdf(d: DashboardData): Promise<void> {
         table: {
           widths: ["*", "auto"],
           body: [
-            kpi("Biaya ban terhindarkan / tahun", formatRupiah(d.finance.fleetCaptured)),
-            kpi("Biaya payload terhindarkan / tahun", formatRupiah(d.finance.payloadAvoidable)),
-            kpi("Total penghematan / tahun", formatRupiah(d.finance.annualSavings)),
-            kpi("Payback", Number.isFinite(d.finance.paybackMonths) ? `${formatNumber(d.finance.paybackMonths, 1)} bulan` : "—"),
-            kpi("ROI tahun-1", formatPersen(d.finance.roiYear1)),
-            kpi("CapEx / OpEx", `${formatRupiah(d.capexIdr)} / ${formatRupiah(d.opexAnnualIdr)}`),
+            kpi("Perkiraan biaya ban yang harus segera diganti", formatRupiah(d.ops.tireReplacementCostIdr)),
+            kpi("Perkiraan kerugian produksi bila ban dibiarkan", formatRupiah(d.ops.productionLossIdr)),
+            kpi("Batubara dimuat hari ini", `${formatNumber(d.ops.coalQuota.loadedT)} / ${formatNumber(d.ops.coalQuota.targetT)} ton`),
+            kpi("Total penghematan per tahun", formatRupiah(d.finance.annualSavings)),
           ],
         },
         layout: "lightHorizontalLines",
         margin: [0, 0, 0, 14],
       },
 
-      { text: "Modul A — Ban (truk hauling)", style: "h2" },
+      { text: "Ban truk hauling", style: "h2" },
       {
         ul: [
-          `${d.tire.totalUnits} unit · Kritis ${d.tire.critical} · Pantau ${d.tire.warn} · Sehat ${d.tire.ok}`,
-          `Rata-rata prediksi umur ban: ${formatNumber(d.tire.avgPredictedLifeKm)} km`,
+          `${d.tire.totalUnits} unit. Kritis ${d.tire.critical}, Pantau ${d.tire.warn}, Sehat ${d.tire.ok}`,
+          `Perkiraan umur ban rata-rata: ${formatNumber(d.tire.avgPredictedLifeKm)} km`,
         ],
         margin: [0, 0, 0, 12],
       },
 
-      { text: "Modul B — Payload (HD785)", style: "h2" },
+      { text: "Muatan HD785", style: "h2" },
       {
         ul: [
-          `${formatNumber(d.payload.count)} event · Under ${formatPersen(d.payload.underPct)} · OK ${formatPersen(d.payload.okPct)} · Over ${formatPersen(d.payload.overPct)}`,
-          `Rata-rata payload: ${formatNumber(d.payload.meanKg)} kg (target 91.000 kg)`,
-          `Kalibrasi: ${d.calibration.needs} dari ${d.calibration.total} HD785 perlu kalibrasi`,
+          `${formatNumber(d.payload.count)} catatan. Kurang ${formatPersen(d.payload.underPct)}, Pas ${formatPersen(d.payload.okPct)}, Berlebih ${formatPersen(d.payload.overPct)}`,
+          `Rata-rata muatan: ${formatNumber(d.payload.meanKg / 1000, 1)} ton (target 91 ton)`,
+          `Kalibrasi: ${d.calibration.needs} dari ${d.calibration.total} HD785 perlu dikalibrasi`,
         ],
         margin: [0, 0, 0, 12],
       },
 
       {
-        text: "Catatan: angka memakai asumsi (editable di layar Finansial & ROI). Lever payload bernilai 0 sampai faktor biaya diisi. Bekerja atas data import/contoh — bukan telematik live.",
+        text: "Catatan: angka memakai asumsi yang bisa diubah di halaman Finansial. Memakai data contoh dan unggahan, bukan data langsung dari alat di truk.",
         style: "note",
       },
     ],

@@ -8,12 +8,15 @@ export interface OpsParams {
   productionValuePerUnitPerDayIdr: number;
   /** Target produksi batubara harian dari HD785 coal (ASUMSI). */
   dailyCoalTargetT: number;
+  /** Jumlah unit HD785 (armada, editable). */
+  hd785UnitCount: number;
 }
 
 export const defaultOpsParams: OpsParams = {
   downtimeDaysPerCriticalUnit: 3,
   productionValuePerUnitPerDayIdr: 25_000_000,
   dailyCoalTargetT: 30_000,
+  hd785UnitCount: 12,
 };
 
 /** Estimasi total harga ban yang akan segera diganti (unit kritis × ban/unit × harga). */

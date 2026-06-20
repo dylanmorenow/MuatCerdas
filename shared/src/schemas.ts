@@ -112,6 +112,15 @@ export const speedParamsSchema = z.object({
   fixedTimeHours: z.number().nonnegative(),
   oneWayKm: z.number().positive(),
   dailyTargetTon: z.number().positive(),
+  haulUnitCount: z.number().int().positive(),
+  haulPayloadCapacityTon: z.number().positive(),
+});
+
+export const opsParamsSchema = z.object({
+  downtimeDaysPerCriticalUnit: z.number().nonnegative(),
+  productionValuePerUnitPerDayIdr: z.number().nonnegative(),
+  dailyCoalTargetT: z.number().positive(),
+  hd785UnitCount: z.number().int().positive(),
 });
 
 export const tkphCatalogEntrySchema = z.object({

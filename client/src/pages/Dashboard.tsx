@@ -15,18 +15,15 @@ export function Dashboard() {
 
   const exportCsv = () => {
     if (!data) return;
-    const f = data.finance;
     const o = data.ops;
     downloadCsv(
-      "kpi-muatcerdas.csv",
+      "kpi-kppulse.csv",
       ["KPI", "Nilai"],
       [
         ["Perkiraan biaya ban yang harus segera diganti (Rp)", Math.round(o.tireReplacementCostIdr)],
         ["Perkiraan kerugian produksi bila ban dibiarkan (Rp)", Math.round(o.productionLossIdr)],
         ["Batubara dimuat hari ini (ton)", Math.round(o.coalQuota.loadedT)],
         ["Target batubara hari ini (ton)", Math.round(o.coalQuota.targetT)],
-        ["Perkiraan balik modal (bulan)", Number.isFinite(f.paybackMonths) ? f.paybackMonths.toFixed(2) : "-"],
-        ["Keuntungan tahun pertama", f.roiYear1.toFixed(4)],
       ],
     );
   };
@@ -44,7 +41,7 @@ export function Dashboard() {
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Ringkasan risiko biaya, kuota produksi batubara, dan perkiraan balik modal. Semua angka memakai asumsi yang bisa diubah di halaman Finansial."
+        subtitle="Ringkasan risiko biaya dan kuota produksi batubara. Semua angka memakai asumsi yang bisa diubah di halaman Finansial."
         actions={
           data ? (
             <div className="flex items-center gap-2">
@@ -88,12 +85,6 @@ export function Dashboard() {
               hint={`${formatPersen(data.ops.coalQuota.pct)} dari target, dari muatan batubara HD785`}
               accent
             />
-            <Kpi
-              label="Perkiraan balik modal"
-              value={Number.isFinite(data.finance.paybackMonths) ? `${formatNumber(data.finance.paybackMonths, 1)} bulan` : "-"}
-            />
-            <Kpi label="Keuntungan tahun pertama" value={formatPersen(data.finance.roiYear1)} />
-            <Kpi label="Biaya investasi & operasional" value={`${formatRupiah(data.capexIdr)}`} hint={`biaya operasional ${formatRupiah(data.opexAnnualIdr)} per tahun`} />
           </div>
 
           {/* Ringkasan modul */}
@@ -182,7 +173,6 @@ function Kpi({ label, value, hint, accent, danger }: { label: string; value: str
     <Card className={accent ? "border-kpp-green/30 bg-emerald-50/40" : danger ? "border-red-200 bg-red-50/40" : undefined}>
       <div className="flex items-center text-xs uppercase tracking-wide text-slate-400">
         {label}
-        {label.startsWith("Perkiraan balik modal") && <InfoTip text="Lama waktu sampai penghematan per bulan menutup biaya investasi awal." />}
       </div>
       <div className={cx("mt-1 text-xl font-bold", danger ? "text-red-600" : "text-slate-800")}>{value}</div>
       {hint && <div className="mt-0.5 text-xs text-slate-500">{hint}</div>}

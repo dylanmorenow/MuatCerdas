@@ -578,7 +578,7 @@ async function main(): Promise<void> {
 
   // — Revisi akhir: katalog operator excavator (OPERATOR-2) + kondisi jalan per zona (ADMIN-8) —
   await prisma.excavatorOperator.createMany({ data: EXCAVATOR_OPERATORS_SEED });
-  await prisma.zoneCondition.createMany({ data: ZONES.map((zone) => ({ zone, condition: "normal" })) });
+  await prisma.zoneCondition.createMany({ data: [...ZONES, "site"].map((zone) => ({ zone, condition: "normal" })) });
 
   // — Ringkasan —
   const [units, haul, dump, tires, trips, exposures, payloads, calibrations, massInputs] = await Promise.all([

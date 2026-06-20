@@ -165,6 +165,8 @@ model SpeedParams {
   fixedTimeHours           Float
   oneWayKm                 Float
   dailyTargetTon           Float
+  haulUnitCount            Int   @default(95)
+  haulPayloadCapacityTon   Float @default(120)
 }
 
 // Katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. Editable (FR-0003-1).
@@ -192,6 +194,7 @@ model OpsParams {
   downtimeDaysPerCriticalUnit    Float
   productionValuePerUnitPerDayIdr Float
   dailyCoalTargetT               Float
+  hd785UnitCount                 Int   @default(12)
 }
 
 // Modul revisi F2 — laporan massa muatan oleh operator lapangan (store-and-forward).
