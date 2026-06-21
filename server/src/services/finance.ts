@@ -19,6 +19,7 @@ import { getTireUnits } from "./tire";
 import { getPayloadAnalytics, getCalibrationHealth } from "./payload";
 import { coalLoadedTodayT } from "./mass";
 import { resolvedTireReplaceUnitIds } from "./resolved";
+import { getCoalTargetForDate, dateKey } from "./coalTarget";
 
 /** Estimasi trip/hari per HD785 (ASUMSI F1; F2 memakai MassInput nyata). */
 const ASSUMED_TRIPS_PER_DAY = 8;
@@ -172,7 +173,9 @@ export interface DashboardData {
   ops: { tireReplacementCostIdr: number; productionLossIdr: number; coalQuota: CoalQuota };
 }
 
-export async function getDashboard(): Promise<DashboardData> {
+export async function getDashboard(todayKey?: string): Promise<DashboardData> {
+  // Item 4 — target coal hari ini dari kalender (client kirim tanggal lokalnya); fallback default.
+  const todayTargetT = await getCoalTargetForDate(todayKey ?? dateKey(new Date()));
   const [params, opsParams, tireUnits, payload, calib, coalUnits] = await Promise.all([
     loadCostParams(),
     loadOpsParams(),
@@ -207,7 +210,7 @@ export async function getDashboard(): Promise<DashboardData> {
     ops: {
       tireReplacementCostIdr: tireReplacementCostIdr(pendingCritical, params.tiresPerUnit, params.tirePriceIdr),
       productionLossIdr: productionLossIdr(pendingCritical, opsParams),
-      coalQuota: coalQuota(coalLoadedT, opsParams),
+      coalQuota: coalQuota(coalLoadedT, opsParams, todayTargetT),
     },
     tire: {
       totalUnits: tireUnits.length,

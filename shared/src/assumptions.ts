@@ -52,8 +52,8 @@ export const defaultSpeedParams: SpeedParams = {
   effectiveWorkHoursPerDay: 20, // ASUMSI (2 shift efektif)
   fixedTimeHours: 0.5, // ASUMSI: loading+dumping+manuver+antri per siklus
   oneWayKm: 35, // rute CPP KM33 → Jetty (verifikasi, docs/ASSUMPTIONS.md §D)
-  dailyTargetTon: 6_000, // ASUMSI sementara (rantai RKAB belum dikunci, §E)
-  haulUnitCount: 95, // jumlah unit hauling (realita lapangan), editable
+  dailyTargetTon: 100_000, // target produksi harian (realita lapangan), editable
+  haulUnitCount: 90, // jumlah unit hauling, editable
   haulPayloadCapacityTon: 120, // kapasitas 2 trailer per unit (ton), editable
 };
 
@@ -63,11 +63,12 @@ export const defaultSpeedParams: SpeedParams = {
  * Kunci = `tireModel` pada Unit. Ban truk hauling (Modul A) + 1 ban HD785 (panel Modul C ringkas).
  */
 export const defaultTkphCatalog: Record<string, number> = {
-  // — ban truk hauling (haul_truck) — WAJIB DICARI —
-  "Michelin X Works Z": 120,
-  "Bridgestone M840": 115,
-  "Michelin X Multi D": 110,
-  "Bridgestone L355": 118,
+  // — ban truk hauling (haul_truck), road-train 120 t — WAJIB DICARI dari brosur —
+  // Nilai realistis utk ban tugas berat; batas aman ≈ TKPH_ban/Qa ≈ 40 km/jam pada muatan penuh.
+  "Michelin X Works Z": 380,
+  "Bridgestone M840": 360,
+  "Michelin X Multi D": 350,
+  "Bridgestone L355": 370,
   // — ban HD785 (pit_dumper) off-highway — WAJIB DICARI —
   "Bridgestone VRPS 27.00R49": 700,
 };

@@ -187,6 +187,8 @@ export interface TireUnitDetail extends TireUnitSummary {
   history: TireHistoryRow[];
   attribution: { baselineLifeKm: number; shortfallKm: number; contributions: FactorContribution[] };
   regressionModel: TireModelSummary;
+  tireModel: string | null;
+  idealLifeKm: number; // umur ban ideal (best-practice tipe ban), untuk perhitungan sisa umur
 }
 
 export interface TireModelSummary {
@@ -245,6 +247,7 @@ function modelSummary(model: TireModel): TireModelSummary {
 interface UnitContext {
   id: string;
   model: string;
+  tireModel: string | null;
   kmPerYear: number;
   tireLifeBestKm: number;
   tirePriceIdr: number;
@@ -268,7 +271,7 @@ async function loadCostParams(): Promise<CostParams> {
 }
 
 async function loadContext(today = new Date()): Promise<TireContext> {
-  const [units, tireRecords, exposures, payloadGroups, tripOpGroups, tripAvgGroups, costParams] =
+  const [units, tireRecords, exposures, payloadGroups, tripOpGroups, tripAvgGroups, costParams, tireCatalog] =
     await Promise.all([
       prisma.unit.findMany({ where: { category: "haul_truck" } }),
       prisma.tireRecord.findMany({ orderBy: { removalDate: "desc" } }),
@@ -282,7 +285,11 @@ async function loadContext(today = new Date()): Promise<TireContext> {
         _avg: { avgPressureDeviationPct: true, payloadIdx: true },
       }),
       loadCostParams(),
+      prisma.tkphCatalog.findMany({ select: { tireModel: true, idealLifeKm: true } }),
     ]);
+
+  // Umur ban ideal per tipe ban (item 5): dari katalog tipe ban; fallback ke CostParams best-practice.
+  const idealLifeByModel = new Map(tireCatalog.map((c) => [c.tireModel, c.idealLifeKm]));
 
   const haulIds = new Set(units.map((u) => u.id));
   const unitModel = new Map(units.map((u) => [u.id, u.model]));
@@ -382,8 +389,9 @@ async function loadContext(today = new Date()): Promise<TireContext> {
   const unitCtx: UnitContext[] = unitCtxPre.map(({ u, features }) => ({
     id: u.id,
     model: u.model,
+    tireModel: u.tireModel ?? null,
     kmPerYear: u.kmPerYear ?? 100_000,
-    tireLifeBestKm: costParams.tireLifeBestKm,
+    tireLifeBestKm: (u.tireModel ? idealLifeByModel.get(u.tireModel) : undefined) ?? costParams.tireLifeBestKm,
     tirePriceIdr: u.tirePriceIdr ?? costParams.tirePriceIdr,
     features,
     history: historyByUnit.get(u.id) ?? [],
@@ -466,6 +474,8 @@ export async function getTireUnitDetail(unitId: string): Promise<TireUnitDetail 
       })),
     },
     regressionModel: modelSummary(ctx.model),
+    tireModel: u.tireModel,
+    idealLifeKm: Math.round(u.tireLifeBestKm),
   };
 }
 
@@ -600,4 +610,81 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
     })
     .filter((r) => !resolved.has(`${r.actionType}::${r.refKey}`))
     .sort((a, b) => b.priority - a.priority || b.estimatedSavingsIdr - a.estimatedSavingsIdr);
+}
+
+// ——————————————————————————————————————————————————————————————
+// Item 5 — Katalog tipe ban (keterangan + umur ideal) & assign tipe ban per unit.
+// Umur ideal dari katalog dipakai sebagai tireLifeBestKm per unit (prediksi/sisa umur).
+// ——————————————————————————————————————————————————————————————
+
+export interface TireCatalogRow {
+  tireModel: string;
+  catalogTkph: number;
+  idealLifeKm: number;
+  sizeSpec: string | null;
+  loadRating: string | null;
+  unitsUsing: string[]; // id unit haul yang memakai tipe ban ini
+}
+
+export async function getTireCatalog(): Promise<TireCatalogRow[]> {
+  const [catalog, units] = await Promise.all([
+    prisma.tkphCatalog.findMany({ orderBy: { tireModel: "asc" } }),
+    prisma.unit.findMany({ where: { category: "haul_truck" }, select: { id: true, tireModel: true } }),
+  ]);
+  return catalog.map((c) => ({
+    tireModel: c.tireModel,
+    catalogTkph: c.catalogTkph,
+    idealLifeKm: c.idealLifeKm,
+    sizeSpec: c.sizeSpec,
+    loadRating: c.loadRating,
+    unitsUsing: units.filter((u) => u.tireModel === c.tireModel).map((u) => u.id),
+  }));
+}
+
+export interface TireCatalogInput {
+  tireModel: string;
+  catalogTkph: number;
+  idealLifeKm: number;
+  sizeSpec?: string | null;
+  loadRating?: string | null;
+}
+
+export async function upsertTireCatalog(input: TireCatalogInput): Promise<TireCatalogRow[]> {
+  const tireModel = input.tireModel.trim();
+  if (!tireModel) throw new Error("Nama tipe ban wajib diisi");
+  await prisma.tkphCatalog.upsert({
+    where: { tireModel },
+    update: {
+      catalogTkph: input.catalogTkph,
+      idealLifeKm: input.idealLifeKm,
+      sizeSpec: input.sizeSpec ?? null,
+      loadRating: input.loadRating ?? null,
+    },
+    create: {
+      tireModel,
+      catalogTkph: input.catalogTkph,
+      idealLifeKm: input.idealLifeKm,
+      sizeSpec: input.sizeSpec ?? null,
+      loadRating: input.loadRating ?? null,
+    },
+  });
+  return getTireCatalog();
+}
+
+/** Daftar unit haul + tipe ban terpasang (untuk UI assign item 5). */
+export async function getHaulUnitsTire(): Promise<{ id: string; model: string; tireModel: string | null }[]> {
+  const units = await prisma.unit.findMany({
+    where: { category: "haul_truck" },
+    select: { id: true, model: true, tireModel: true },
+    orderBy: { id: "asc" },
+  });
+  return units;
+}
+
+/** Set tipe ban (tireModel) sebuah unit haul → memengaruhi umur ideal & prediksi (item 5). */
+export async function assignUnitTire(unitId: string, tireModel: string): Promise<void> {
+  const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { category: true } });
+  if (!unit) throw new Error(`Unit '${unitId}' tak ditemukan`);
+  if (unit.category !== "haul_truck") throw new Error("Tipe ban hanya untuk unit truk hauling (SR-V3)");
+  await prisma.unit.update({ where: { id: unitId }, data: { tireModel } });
 }

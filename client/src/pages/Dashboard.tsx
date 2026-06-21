@@ -4,6 +4,7 @@ import { formatNumber, formatRupiah, formatPersen, formatTon } from "@muatcerdas
 import { useDashboard } from "../api/finance";
 import { useRoadMap } from "../api/roadmap";
 import { HazardMap } from "../components/HazardMap";
+import { CoalTargetCalendar } from "../components/CoalTargetCalendar";
 import { PageHeader, Card, Loading, ErrorState, InfoTip, cx } from "../components/ui";
 import { downloadReportPdf, downloadCsv } from "../lib/export";
 
@@ -86,6 +87,9 @@ export function Dashboard() {
               accent
             />
           </div>
+
+          {/* Item 4 — kalender target produksi batubara harian */}
+          <CoalTargetCalendar />
 
           {/* Ringkasan modul */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

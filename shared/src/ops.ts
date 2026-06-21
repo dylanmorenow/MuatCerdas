@@ -36,7 +36,8 @@ export interface CoalQuota {
 }
 
 /** Kuota target produksi harian (HD785 coal) + progres dari massa coal dimuat. */
-export function coalQuota(loadedT: number, p: OpsParams): CoalQuota {
-  const targetT = p.dailyCoalTargetT;
+export function coalQuota(loadedT: number, p: OpsParams, targetTOverride?: number | null): CoalQuota {
+  // Item 4 — kalender: target tanggal (override) menang; fallback ke OpsParams default.
+  const targetT = targetTOverride != null && targetTOverride > 0 ? targetTOverride : p.dailyCoalTargetT;
   return { targetT, loadedT, pct: targetT > 0 ? loadedT / targetT : 0 };
 }

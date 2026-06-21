@@ -173,6 +173,9 @@ model SpeedParams {
 model TkphCatalog {
   tireModel   String @id
   catalogTkph Float
+  idealLifeKm Float   @default(100000) // umur ban ideal (best-practice) untuk tipe ban ini
+  sizeSpec    String? // ukuran/spesifikasi ban (keterangan)
+  loadRating  String? // indeks/rating beban (keterangan)
 }
 
 // Modul D (M10) — pengguna & peran. Tipis: admin (akses penuh) / driver (satu unit).
@@ -285,4 +288,12 @@ model ResolvedAction {
 model ZoneCondition {
   zone      String @id // "cpp" | "tengah" | "jetty"
   condition String // "normal" | "dusty" | "wet" | "muddy" | "slippery"
+}
+
+// Revisi item 4 — target/kuota produksi batubara per hari (sistem kalender). Admin bisa
+// menyetel target untuk beberapa hari ke depan. Dashboard memakai target tanggal hari ini
+// (fallback ke OpsParams.dailyCoalTargetT bila tanggal belum disetel).
+model CoalTarget {
+  date    String @id // "YYYY-MM-DD" (tanggal lokal)
+  targetT Float // target produksi batubara hari itu (ton)
 }

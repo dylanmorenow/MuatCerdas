@@ -37,7 +37,7 @@ describe("computeSpeedModel (Modul C, MURNI tanpa DB)", () => {
   });
 
   it("AC#4 (service): target tinggi ⇒ fleet KONFLIK + ≥1 opsi terukur", () => {
-    const params: SpeedParams = { ...defaultSpeedParams, dailyTargetTon: 3_000 };
+    const params: SpeedParams = { ...defaultSpeedParams, dailyTargetTon: 8_000 };
     const m = computeSpeedModel({ params, catalog, haulUnits, hd785Units });
     expect(m.fleet.decision.status).toBe("conflict");
     expect(m.fleet.decision.options.length).toBeGreaterThanOrEqual(1);

@@ -1,7 +1,9 @@
 // Endpoint Inti — Finansial/ROI (§12.7–§12.9) + Dashboard. FR-0002-12/13/14.
 
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { getFinanceData, saveCostParams, resetCostParams, getDashboard } from "../services/finance";
+import { listCoalTargets, setCoalTarget } from "../services/coalTarget";
 
 export async function financeRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/finance", async () => getFinanceData());
@@ -20,5 +22,24 @@ export async function financeRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/api/finance/reset", async () => resetCostParams());
 
-  app.get("/api/dashboard", async () => getDashboard());
+  app.get("/api/dashboard", async (request) => {
+    const { today } = request.query as { today?: string };
+    return getDashboard(today);
+  });
+
+  // — Item 4: kalender target produksi batubara harian —
+  app.get("/api/coal-targets", async () => listCoalTargets());
+
+  app.put("/api/coal-targets", async (request, reply) => {
+    const parsed = z
+      .object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), targetT: z.number().min(0) })
+      .safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Input tidak valid" });
+    try {
+      await setCoalTarget(parsed.data.date, parsed.data.targetT);
+      return { ok: true, targets: await listCoalTargets() };
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
+    }
+  });
 }

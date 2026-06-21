@@ -50,6 +50,7 @@ const NAV: NavGroup[] = [
 
 export function AppShell() {
   const [open, setOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const location = useLocation();
   const { data: authCfg } = useAuthConfig();
   const { data: me } = useMe();
@@ -63,9 +64,19 @@ export function AppShell() {
           open ? "flex" : "hidden lg:flex",
         )}
       >
-        <div className="border-b border-white/10 px-5 py-5">
-          <div className="text-lg font-bold">KPPulse</div>
-          <div className="text-xs text-white/70">Cerdas kelola ban dan muatan, KPP Mining</div>
+        {/* Logo wordmark (client/public/logo.png) di panel putih agar warna hijau-biru logo
+            terlihat jelas di atas sidebar hijau. Bila file hilang, fallback ke teks. */}
+        <div className="border-b border-white/10 bg-white px-4 py-4">
+          {logoError ? (
+            <div className="text-center text-lg font-bold text-kpp-green">KPPulse</div>
+          ) : (
+            <img
+              src="/logo.png"
+              alt="KPPulse — Mining Fleet System"
+              className="mx-auto block h-auto w-full max-w-[200px] object-contain"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
           {NAV.map((group) => (
@@ -127,7 +138,11 @@ export function AppShell() {
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span className="font-bold text-kpp-green">KPPulse</span>
+          {logoError ? (
+            <span className="font-bold text-kpp-green">KPPulse</span>
+          ) : (
+            <img src="/logo.png" alt="KPPulse" className="h-8 w-auto object-contain" onError={() => setLogoError(true)} />
+          )}
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">

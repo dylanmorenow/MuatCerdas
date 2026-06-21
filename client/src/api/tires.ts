@@ -1,7 +1,7 @@
 // Hook TanStack Query untuk Modul A (Tire). Tipe respons mengikuti server services/tire.ts.
 
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "./client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiSend } from "./client";
 
 export type TireStatus = "ok" | "warn" | "critical";
 
@@ -72,6 +72,8 @@ export interface TireUnitDetail extends TireUnitSummary {
     contributions: FactorContribution[];
   };
   regressionModel: TireModelSummary;
+  tireModel: string | null;
+  idealLifeKm: number;
 }
 
 export interface TireRecommendation {
@@ -108,4 +110,61 @@ export function useTireRecommendations() {
 
 export function useTireModel() {
   return useQuery({ queryKey: ["tire-model"], queryFn: () => apiGet<TireModelSummary>("/api/tires/model") });
+}
+
+// — Item 5: katalog tipe ban (keterangan + umur ideal) & assign tipe ban per unit —
+export interface TireCatalogRow {
+  tireModel: string;
+  catalogTkph: number;
+  idealLifeKm: number;
+  sizeSpec: string | null;
+  loadRating: string | null;
+  unitsUsing: string[];
+}
+
+export interface TireAssignRow {
+  id: string;
+  model: string;
+  tireModel: string | null;
+}
+
+export function useTireCatalog() {
+  return useQuery({ queryKey: ["tire-catalog"], queryFn: () => apiGet<TireCatalogRow[]>("/api/tires/catalog") });
+}
+
+export function useSaveTireCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      tireModel: string;
+      catalogTkph: number;
+      idealLifeKm: number;
+      sizeSpec?: string | null;
+      loadRating?: string | null;
+    }) => apiSend<TireCatalogRow[]>("/api/tires/catalog", "PUT", body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tire-catalog"] });
+      void qc.invalidateQueries({ queryKey: ["tire-units"] });
+      void qc.invalidateQueries({ queryKey: ["tire-unit"] });
+    },
+  });
+}
+
+export function useTireAssignments() {
+  return useQuery({ queryKey: ["tire-assign"], queryFn: () => apiGet<TireAssignRow[]>("/api/tires/assign") });
+}
+
+export function useAssignUnitTire() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ unitId, tireModel }: { unitId: string; tireModel: string }) =>
+      apiSend<{ ok: boolean }>(`/api/tires/assign/${unitId}`, "PUT", { tireModel }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tire-assign"] });
+      void qc.invalidateQueries({ queryKey: ["tire-catalog"] });
+      void qc.invalidateQueries({ queryKey: ["tire-units"] });
+      void qc.invalidateQueries({ queryKey: ["tire-unit"] });
+      void qc.invalidateQueries({ queryKey: ["speed"] });
+    },
+  });
 }

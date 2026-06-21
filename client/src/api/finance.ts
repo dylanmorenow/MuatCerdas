@@ -43,8 +43,42 @@ export function useFinance() {
   return useQuery({ queryKey: ["finance"], queryFn: () => apiGet<FinanceData>("/api/finance") });
 }
 
+/** Kunci tanggal lokal "YYYY-MM-DD" (untuk target coal per hari, item 4). */
+export function localDateKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function useDashboard() {
-  return useQuery({ queryKey: ["dashboard"], queryFn: () => apiGet<DashboardData>("/api/dashboard") });
+  const today = localDateKey();
+  return useQuery({
+    queryKey: ["dashboard", today],
+    queryFn: () => apiGet<DashboardData>(`/api/dashboard?today=${today}`),
+  });
+}
+
+// — Item 4: kalender target produksi batubara harian —
+export interface CoalTarget {
+  date: string; // "YYYY-MM-DD"
+  targetT: number;
+}
+
+export function useCoalTargets() {
+  return useQuery({ queryKey: ["coal-targets"], queryFn: () => apiGet<CoalTarget[]>("/api/coal-targets") });
+}
+
+export function useSaveCoalTarget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CoalTarget) =>
+      apiSend<{ ok: boolean; targets: CoalTarget[] }>("/api/coal-targets", "PUT", body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["coal-targets"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
 }
 
 function useInvalidateFinance() {

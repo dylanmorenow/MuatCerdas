@@ -560,8 +560,22 @@ async function main(): Promise<void> {
 
   // — Modul C (M9): SpeedParams (id=1) + katalog TKPH per model ban (WAJIB DICARI) —
   await prisma.speedParams.create({ data: { id: 1, ...defaultSpeedParams } });
+  // Keterangan tipe ban (item 5): umur ideal best-practice + spesifikasi (ASUMSI; ganti dari brosur).
+  const tireMeta: Record<string, { idealLifeKm: number; sizeSpec: string; loadRating: string }> = {
+    "Michelin X Works Z": { idealLifeKm: 120_000, sizeSpec: "315/80R22.5", loadRating: "156/150 L" },
+    "Bridgestone M840": { idealLifeKm: 110_000, sizeSpec: "315/80R22.5", loadRating: "156/150 K" },
+    "Michelin X Multi D": { idealLifeKm: 105_000, sizeSpec: "315/80R22.5", loadRating: "154/150 L" },
+    "Bridgestone L355": { idealLifeKm: 115_000, sizeSpec: "315/80R22.5", loadRating: "156/150 K" },
+    "Bridgestone VRPS 27.00R49": { idealLifeKm: 90_000, sizeSpec: "27.00R49", loadRating: "E-4" },
+  };
   await prisma.tkphCatalog.createMany({
-    data: Object.entries(defaultTkphCatalog).map(([tireModel, catalogTkph]) => ({ tireModel, catalogTkph })),
+    data: Object.entries(defaultTkphCatalog).map(([tireModel, catalogTkph]) => ({
+      tireModel,
+      catalogTkph,
+      idealLifeKm: tireMeta[tireModel]?.idealLifeKm ?? 100_000,
+      sizeSpec: tireMeta[tireModel]?.sizeSpec ?? null,
+      loadRating: tireMeta[tireModel]?.loadRating ?? null,
+    })),
   });
 
   // — Modul D (M10): User & peran. Admin (kredensial M8) + driver contoh (campur HD785 & haul). —
