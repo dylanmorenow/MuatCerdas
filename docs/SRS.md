@@ -43,7 +43,7 @@
 | SR-16 | menyediakan auth tipis yang dapat dinonaktifkan | FR-0002-16 | Inti | Nice |
 
 ### 4.x Aturan & validasi
-- **SR-V1** Status payload: `<95%`=under, `95–110%`=ok, `>110%`=over (PRD §12.3).
+- **SR-V1** Status payload: `<85%`=under, `85–100%`=ok, `>100%`=over (PRD §12.3).
 - **SR-V2** Semua input divalidasi (Zod). Data buruk → pesan jelas, tidak crash; baris valid tetap diproses.
 - **SR-V3** Pemetaan kategori unit ditegakkan: Modul A hanya `haul_truck`, Modul B hanya `pit_dumper`. Sistem MENOLAK menempatkan HD785 di analitik ban dan sebaliknya.
 - **SR-V4** Prediksi & atribusi harus explainable (koefisien/kontribusi dapat dilihat) — bukan black-box.

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { formatNumber } from "@muatcerdas/shared";
 import { useOpsParams, useSaveOpsParams, useOperators, useAddOperator } from "../api/fleet";
 import { useSpeed } from "../api/speed";
+import { useInventory } from "../api/data";
 import { Card, Stat, Badge } from "../components/ui";
 
 export function FleetOperatorPanel() {
@@ -10,11 +11,13 @@ export function FleetOperatorPanel() {
   const saveOps = useSaveOpsParams();
   const { data: speed } = useSpeed();
   const { data: operators } = useOperators();
+  const { data: inv } = useInventory();
   const addOp = useAddOperator();
 
   const [hd785, setHd785] = useState<string>("");
   const [opName, setOpName] = useState("");
   const [opShift, setOpShift] = useState("day");
+  const [opUnit, setOpUnit] = useState("");
 
   const hd785Value = hd785 !== "" ? hd785 : String(ops?.hd785UnitCount ?? "");
   const saveHd785 = () => {
@@ -29,7 +32,15 @@ export function FleetOperatorPanel() {
     e.preventDefault();
     const name = opName.trim();
     if (!name) return;
-    addOp.mutate({ name, shift: opShift }, { onSuccess: () => setOpName("") });
+    addOp.mutate(
+      { name, shift: opShift, unitId: opUnit || null },
+      {
+        onSuccess: () => {
+          setOpName("");
+          setOpUnit("");
+        },
+      },
+    );
   };
 
   return (
@@ -67,15 +78,30 @@ export function FleetOperatorPanel() {
         {/* Operator untuk unit baru */}
         <Card>
           <h3 className="mb-1 font-semibold text-slate-800">Operator</h3>
-          <p className="mb-3 text-xs text-slate-400">Tambah nama operator untuk unit baru.</p>
+          <p className="mb-3 text-xs text-slate-400">Tambah nama operator, shift, dan unit kendaraan yang dipegang.</p>
           <form onSubmit={submitOp} className="mb-3 flex flex-wrap items-end gap-2">
             <input
               type="text"
               value={opName}
               onChange={(e) => setOpName(e.target.value)}
               placeholder="Nama operator"
-              className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="min-w-[140px] flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
+            <label className="block">
+              <span className="mb-0.5 block text-[10px] text-slate-400">Unit dipegang</span>
+              <select
+                value={opUnit}
+                onChange={(e) => setOpUnit(e.target.value)}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Tanpa unit</option>
+                {inv?.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.id} · {u.model}
+                  </option>
+                ))}
+              </select>
+            </label>
             <select value={opShift} onChange={(e) => setOpShift(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
               <option value="day">Shift siang</option>
               <option value="night">Shift malam</option>
@@ -93,7 +119,7 @@ export function FleetOperatorPanel() {
             <div className="flex flex-wrap gap-1.5">
               {operators?.map((o) => (
                 <Badge key={o.id} tone={o.shift === "night" ? "slate" : "blue"}>
-                  {o.name} ({o.shift === "night" ? "malam" : "siang"})
+                  {o.name} ({o.shift === "night" ? "malam" : "siang"}){o.unitId ? ` · ${o.unitId}` : ""}
                 </Badge>
               ))}
             </div>

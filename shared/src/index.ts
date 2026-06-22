@@ -26,3 +26,4 @@ export * from "./finance/roi"; // §12.8–§12.9
 export * from "./speed/tkph"; // §C.1–§C.3
 export * from "./speed/productionSpeed"; // §C.4–§C.5
 export * from "./speed/decision"; // §C.6
+export * from "./speed/groundSpeed"; // kecepatan aktual GPS + kedekatan hazard

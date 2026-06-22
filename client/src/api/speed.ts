@@ -5,6 +5,7 @@ import type {
   TkphCatalogEntry,
   SpeedDecision,
   ProductionSpeedResult,
+  SpeedActualStatus,
 } from "@muatcerdas/shared";
 import { apiGet, apiSend } from "./client";
 
@@ -25,6 +26,8 @@ export interface SpeedUnitRow {
   reason: string;
   zone: string | null;
   zoneCondition: string;
+  actualSpeedKmh: number | null;
+  actualStatus: SpeedActualStatus;
 }
 
 export interface Hd785SpeedRow {
@@ -40,6 +43,8 @@ export interface Hd785SpeedRow {
   vmaxSafeTravelKmh: number;
   overTarget: boolean;
   reason: string;
+  actualSpeedKmh: number | null;
+  actualStatus: SpeedActualStatus;
 }
 
 export interface SpeedOverview {
@@ -60,7 +65,12 @@ export interface SpeedOverview {
 }
 
 export function useSpeed() {
-  return useQuery({ queryKey: ["speed"], queryFn: () => apiGet<SpeedOverview>("/api/speed") });
+  // Polling ringan agar kecepatan AKTUAL GPS terlihat naik-turun secara live.
+  return useQuery({
+    queryKey: ["speed"],
+    queryFn: () => apiGet<SpeedOverview>("/api/speed"),
+    refetchInterval: 4000,
+  });
 }
 
 function useInvalidateSpeed() {

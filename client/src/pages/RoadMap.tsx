@@ -10,8 +10,8 @@ export function RoadMap() {
   return (
     <>
       <PageHeader
-        title="Peta Jalan Kamera AI (prototipe)"
-        subtitle="Dua rute dipetakan kamera berbasis AI di truk paling depan dan paling belakang: rute hauling CPP KM 33 ke Jetty (truk hauling) dan rute in-pit site Indexim Coalindo (HD785). Kondisi tiap ruas dihitung dari bahaya, lalu dipakai untuk perkiraan umur ban dan kecepatan aman. Data simulasi, bukan kamera langsung."
+        title="Peta Jalan Kamera AI + Posisi GPS"
+        subtitle="Rute dipetakan satu kamera AI di truk paling depan: rute hauling CPP KM 33 ke Jetty (truk hauling) dan rute in-pit site Indexim Coalindo (HD785). Kondisi tiap ruas dihitung dari bahaya, lalu dipakai untuk perkiraan umur ban dan kecepatan aman. Penanda truk bergerak memakai GPS real-time (Teltonika FMB) tiap unit. Kondisi jalan = data simulasi kamera; posisi unit = GPS."
         actions={
           <button
             onClick={() => recompute.mutate()}

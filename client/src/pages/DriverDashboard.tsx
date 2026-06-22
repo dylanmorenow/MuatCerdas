@@ -1,13 +1,27 @@
 // Surface DRIVER (FR-0004-4) — besar, sederhana, terbaca sekilas saat operasi.
-import { formatNumber, cyclesRemaining } from "@muatcerdas/shared";
-import { useDriverMe } from "../api/driver";
+import { useEffect, useRef } from "react";
+import {
+  formatNumber,
+  cyclesRemaining,
+  hazardLabel,
+  type SpeedActualStatus,
+  type HazardProximity,
+} from "@muatcerdas/shared";
+import { useDriverMe, type DriverBundle } from "../api/driver";
 import { clearToken } from "../api/auth";
 import { Loading, ErrorState, cx } from "../components/ui";
 import { HazardMap } from "../components/HazardMap";
 import { MassReportForm } from "../components/MassReport";
-import { DriverTripSim } from "../components/DriverTripSim";
+import { DriverAutoMonitor } from "../components/DriverAutoMonitor";
 
 const CYCLE_KM = 70;
+
+const ACTUAL_TONE: Record<SpeedActualStatus, { bg: string; label: string }> = {
+  ok: { bg: "bg-kpp-blue", label: "AMAN" },
+  near: { bg: "bg-amber-500", label: "MENDEKATI BATAS" },
+  over: { bg: "bg-red-600", label: "DI ATAS BATAS — PELAN" },
+  none: { bg: "bg-slate-600", label: "GPS belum tersedia" },
+};
 
 const PAYLOAD_TONE: Record<string, { bg: string; label: string }> = {
   under: { bg: "bg-amber-500", label: "KURANG" },
@@ -50,15 +64,11 @@ export function DriverDashboard() {
 
         {data && (
           <div className="space-y-5">
-            {/* Kecepatan maksimum aman */}
-            <div className={cx("rounded-2xl p-6 text-white", data.speed?.overTarget ? "bg-red-600" : "bg-kpp-blue")}>
-              <div className="text-sm uppercase tracking-wide text-white/80">Kecepatan maksimum aman</div>
-              <div className="mt-1 text-6xl font-extrabold">
-                {data.speed ? formatNumber(data.speed.vmaxSafeTravelKmh, 1) : "-"}
-                <span className="ml-2 text-2xl font-semibold">km/jam</span>
-              </div>
-              <div className="mt-2 text-sm text-white/90">{data.speed?.reason ?? "data kecepatan belum tersedia"}</div>
-            </div>
+            {/* Peringatan kedekatan bahaya (digerakkan posisi GPS) */}
+            {data.hazardAhead && <HazardBanner p={data.hazardAhead} />}
+
+            {/* Kecepatan AKTUAL dari GPS — pengganti spidometer */}
+            <ActualSpeedHero tel={data.telemetry} reason={data.speed?.reason ?? "data kecepatan belum tersedia"} />
 
             {/* Massa muatan (HD785) atau Kondisi ban (haul) */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -101,11 +111,14 @@ export function DriverDashboard() {
               operatorName={data.identity.name ?? data.identity.username ?? data.unit.id}
             />
 
-            {/* Simulasi perjalanan → overspeed/hazard/rem mendadak (pakai bahaya peta rute unit ini) */}
-            <DriverTripSim
+            {/* Pemantauan otomatis dari GPS → overspeed/rem mendadak/hazard (Revisi #5) */}
+            <DriverAutoMonitor
               unitId={data.unit.id}
+              groundSpeedKmh={data.telemetry?.groundSpeedKmh ?? null}
+              actualStatus={data.telemetry?.actualStatus ?? "none"}
               vmaxKmh={data.speed?.vmaxSafeTravelKmh ?? null}
-              hazards={data.roadMap.hazards.map((h) => ({ type: h.type, positionKm: h.positionKm }))}
+              hazard={data.hazardAhead}
+              capturedAt={data.telemetry?.capturedAt ?? null}
             />
 
             {/* Peta bahaya jalan kamera AI — HD785: rute in-pit; hauling: KM33 ke Jetty */}
@@ -116,11 +129,73 @@ export function DriverDashboard() {
                 </h2>
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">prototipe, data simulasi</span>
               </div>
-              <HazardMap data={data.roadMap} />
+              <HazardMap
+                data={data.roadMap}
+                live={
+                  data.telemetry
+                    ? [{ unitId: data.unit.id, progressKm: data.telemetry.progressKm, groundSpeedKmh: data.telemetry.groundSpeedKmh }]
+                    : []
+                }
+                selfUnitId={data.unit.id}
+                selfStatus={data.telemetry?.actualStatus ?? "none"}
+              />
             </div>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function ActualSpeedHero({ tel, reason }: { tel: DriverBundle["telemetry"]; reason: string }) {
+  const prev = useRef<number | null>(null);
+  const speed = tel?.groundSpeedKmh ?? null;
+  const delta = speed != null && prev.current != null ? speed - prev.current : 0;
+  useEffect(() => {
+    if (speed != null) prev.current = speed;
+  }, [speed]);
+
+  const tone = ACTUAL_TONE[tel?.actualStatus ?? "none"];
+  const trend = delta > 0.3 ? "▲" : delta < -0.3 ? "▼" : "■";
+  const vmax = tel?.vmaxSafeTravelKmh ?? null;
+
+  return (
+    <div className={cx("rounded-2xl p-6 text-white", tone.bg)}>
+      <div className="flex items-center justify-between">
+        <div className="text-sm uppercase tracking-wide text-white/80">Kecepatan aktual (GPS)</div>
+        <span className="rounded bg-white/15 px-2 py-0.5 text-[10px] text-white/90">
+          dari pergerakan koordinat · bukan spidometer
+        </span>
+      </div>
+      <div className="mt-1 flex items-end gap-3">
+        <div className="text-7xl font-extrabold leading-none">{speed != null ? formatNumber(speed, 0) : "-"}</div>
+        <div className="pb-2 text-2xl font-semibold">km/jam</div>
+        {speed != null && <div className="pb-2 text-3xl font-bold text-white/80">{trend}</div>}
+      </div>
+      <div className="mt-2 text-sm font-medium text-white/95">
+        {vmax != null ? `Batas aman ${formatNumber(vmax, 0)} km/jam · ${tone.label}` : tone.label}
+      </div>
+      <div className="mt-0.5 text-xs text-white/80">{reason}</div>
+    </div>
+  );
+}
+
+function HazardBanner({ p }: { p: HazardProximity }) {
+  if (p.status === "clear" || p.distanceKm == null) return null;
+  const inZone = p.status === "in_zone";
+  const meters = Math.round(p.distanceKm * 1000);
+  const what = p.type ? hazardLabel(p.type) : "bahaya jalan";
+  return (
+    <div
+      className={cx(
+        "rounded-2xl px-5 py-4 text-white",
+        inZone ? "animate-pulse bg-red-600" : "bg-amber-500",
+      )}
+    >
+      <div className="text-lg font-bold">{inZone ? "⚠ MASUK ZONA HAZARD" : "Mendekati hazard"}</div>
+      <div className="text-sm text-white/95">
+        {what} {inZone ? "— kurangi kecepatan sekarang" : `±${meters} m di depan`}
+      </div>
     </div>
   );
 }

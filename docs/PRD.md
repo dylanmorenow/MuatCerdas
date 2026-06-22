@@ -117,7 +117,7 @@ KPP kehilangan biaya berulang dari (1) penggantian ban truk hauling yang dini da
 ### FR-0002-7 Analitik payload (Modul B)
 | # | Criteria |
 |---|----------|
-| 1 | Given payload events HD785, then ditampilkan % under (<95% target), ok (95–110%), over (>110%) dan rata-rata payload |
+| 1 | Given payload events HD785, then ditampilkan % under (<85% target), ok (85–100%), over (>100%) dan rata-rata payload |
 | 2 | Given pilih per operator/unit, then statistik dihitung ulang untuk irisan itu |
 
 ### FR-0002-12 / FR-0002-13 Finansial & ROI
@@ -132,7 +132,7 @@ KPP kehilangan biaya berulang dari (1) penggantian ban truk hauling yang dini da
 | # | Criteria |
 |---|----------|
 | 1 | Given urutan berat bucket dimasukkan/feed, when total dalam target, then indikator HIJAU |
-| 2 | Given total ≥95% target, then KUNING; given >110%, then MERAH "STOP" |
+| 2 | Given total ≥85% target, then KUNING; given >100%, then MERAH "STOP" |
 
 ---
 
@@ -195,7 +195,7 @@ Fit via normal equations / lib regresi. Tampilkan koefisien (explainable). **Fal
 contribution_i = β_i * (x_i - x_i_baseline)   // dinormalisasi agar Σ ≈ shortfall
 ```
 
-**§12.3 Analitik payload (Modul B).** Dari `PayloadEvent`: status `<95%`=under, `95–110%`=ok, `>110%`=over; hitung %, mean, stdev, breakdown per unit/operator, tren waktu.
+**§12.3 Analitik payload (Modul B).** Dari `PayloadEvent`: status `<85%`=under, `85–100%`=ok, `>100%`=over; hitung %, mean, stdev, breakdown per unit/operator, tren waktu.
 
 **§12.4 Overload→keausan (Modul B, Rupiah).**
 ```
@@ -204,7 +204,7 @@ overloadWearCost(unit) = overloadRate * overloadWearCostFactorIdr
 ```
 Korelasikan overloadRate vs umur ban/komponen HD785 (tampilkan, jadikan biaya).
 
-**§12.5 Loading guidance.** total = Σ bucket; HIJAU bila dalam target, KUNING ≥95%, MERAH >110% target.
+**§12.5 Loading guidance.** total = Σ bucket; HIJAU bila dalam target, KUNING ≥85%, MERAH >100% target.
 
 **§12.6 Calibration drift.** `needsCalibration = |scaleStudyOffsetPct|>5 OR usia kalibrasi >90 hari`.
 

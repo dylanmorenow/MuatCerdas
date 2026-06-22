@@ -69,6 +69,8 @@ export const defaultTkphCatalog: Record<string, number> = {
   "Bridgestone M840": 360,
   "Michelin X Multi D": 350,
   "Bridgestone L355": 370,
+  "Bridgestone L317": 370, // Scania 620 XT (325/95R24) — opsi ban
+  "Pirelli TQ01": 300, // Scania P410 (13.00R24) — opsi ban
   // — ban HD785 (pit_dumper) off-highway — WAJIB DICARI —
   "Bridgestone VRPS 27.00R49": 700,
 };

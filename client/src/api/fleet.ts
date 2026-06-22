@@ -7,6 +7,7 @@ export interface Operator {
   id: string;
   name: string;
   shift: string;
+  unitId: string | null;
 }
 
 export function useOperators() {
@@ -16,7 +17,8 @@ export function useOperators() {
 export function useAddOperator() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; shift: string }) => apiSend<Operator>("/api/operators", "POST", body),
+    mutationFn: (body: { name: string; shift: string; unitId?: string | null }) =>
+      apiSend<Operator>("/api/operators", "POST", body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["operators"] });
       void qc.invalidateQueries({ queryKey: ["inventory"] });

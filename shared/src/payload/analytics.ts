@@ -3,9 +3,9 @@
 
 import type { PayloadEvent, PayloadStatus } from "../types";
 
-/** SR-V1: <95% target = under; 95–110% = ok; >110% = over. */
-export const PAYLOAD_UNDER_THRESHOLD = 0.95;
-export const PAYLOAD_OVER_THRESHOLD = 1.1;
+/** SR-V1: <85% target = under; 85–100% = ok; >100% = over. */
+export const PAYLOAD_UNDER_THRESHOLD = 0.85;
+export const PAYLOAD_OVER_THRESHOLD = 1.0;
 
 /** Klasifikasi satu pengukuran payload terhadap target (SR-V1). */
 export function classifyPayload(measuredKg: number, targetKg: number): PayloadStatus {

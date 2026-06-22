@@ -15,10 +15,10 @@ const ev = (id: string, unitId: string, kg: number, ts: string): PayloadEvent =>
 
 describe("payloadTrend (helper murni)", () => {
   const events = [
-    ev("1", "HD-1", 90_000, "2026-06-01T08:00:00Z"), // ok
-    ev("2", "HD-1", 100_000, "2026-06-01T10:00:00Z"), // ok
-    ev("3", "HD-2", 80_000, "2026-06-02T09:00:00Z"), // under
-    ev("4", "HD-2", 105_000, "2026-06-02T11:00:00Z"), // over
+    ev("1", "HD-1", 86_000, "2026-06-01T08:00:00Z"), // ok (94,5%)
+    ev("2", "HD-1", 90_000, "2026-06-01T10:00:00Z"), // ok (98,9%)
+    ev("3", "HD-2", 70_000, "2026-06-02T09:00:00Z"), // under (76,9%)
+    ev("4", "HD-2", 100_000, "2026-06-02T11:00:00Z"), // over (109,9%)
   ];
   const t = payloadTrend(events);
 
@@ -30,7 +30,7 @@ describe("payloadTrend (helper murni)", () => {
 
   it("mean & komposisi status per hari", () => {
     expect(t[0]?.count).toBe(2);
-    expect(t[0]?.mean).toBe(95_000);
+    expect(t[0]?.mean).toBe(88_000);
     expect(t[0]?.okPct).toBeCloseTo(1, 6);
     expect(t[1]?.underPct).toBeCloseTo(0.5, 6);
     expect(t[1]?.overPct).toBeCloseTo(0.5, 6);

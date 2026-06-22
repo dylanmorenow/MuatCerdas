@@ -11,6 +11,7 @@ import {
   type HazardLike,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
+import { getFleetTelemetry } from "./telemetry";
 
 /** Stempel "terakhir diperbarui" = SIMULASI (bukan waktu nyata feed live). */
 const MAP_LAST_UPDATED = "2026-06-14T05:30:00.000Z";
@@ -35,12 +36,21 @@ export interface RoadMapSegment {
   hazardCount: number;
 }
 
+/** Posisi truk LIVE dari telemetri GPS — penanda bergerak di peta. */
+export interface RoadMapLivePosition {
+  unitId: string;
+  progressKm: number;
+  groundSpeedKmh: number;
+}
+
 export interface RoadMapData {
   segments: RoadMapSegment[];
   hazards: RoadMapHazard[];
   routeLengthKm: number;
   /** Truk ber-kamera (asumsi: lead + last). */
   mappers: { leadUnitId: string | null; lastUnitId: string | null };
+  /** Posisi truk live (GPS simulasi) pada rute ini. */
+  livePositions: RoadMapLivePosition[];
   lastUpdated: string;
   source: string; // "simulasi"
   /** Label ujung rute untuk peta (berbeda per area). */
@@ -100,6 +110,7 @@ export const seededRoadMapSource: RoadMapSource = {
       })),
       routeLengthKm: segments.reduce((s, x) => s + x.lengthKm, 0),
       mappers: pickMappers(mapperUnits.map((u) => u.id)),
+      livePositions: [], // diisi getRoadMap dari telemetri GPS area ini
       lastUpdated: MAP_LAST_UPDATED,
       source: "simulasi",
       startLabel: area === "site" ? "Loading Point" : "KM 33 (CPP)",
@@ -109,7 +120,11 @@ export const seededRoadMapSource: RoadMapSource = {
 };
 
 export async function getRoadMap(area: MapArea = "haul"): Promise<RoadMapData> {
-  return seededRoadMapSource.read(area);
+  const [data, telemetry] = await Promise.all([seededRoadMapSource.read(area), getFleetTelemetry()]);
+  data.livePositions = [...telemetry.values()]
+    .filter((t) => t.area === area)
+    .map((t) => ({ unitId: t.unitId, progressKm: t.progressKm, groundSpeedKmh: t.groundSpeedKmh }));
+  return data;
 }
 
 /**

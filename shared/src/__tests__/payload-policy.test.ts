@@ -17,10 +17,10 @@ describe("loadingPolicy §FR-0002-11", () => {
     expect(p.effectivePayloadKg).toBeCloseTo(89_100, 6);
   });
 
-  it("band target = [95% .. 110%]", () => {
+  it("band target = [85% .. 100%]", () => {
     const p = loadingPolicy({ targetKg: T, bucketCapacityM3: 11, materialDensityTPerM3: 0.9 });
-    expect(p.targetBandKg[0]).toBeCloseTo(86_450, 6); // 0,95
-    expect(p.targetBandKg[1]).toBeCloseTo(100_100, 6); // 1,10
+    expect(p.targetBandKg[0]).toBeCloseTo(77_350, 6); // 0,85
+    expect(p.targetBandKg[1]).toBeCloseTo(91_000, 6); // 1,00
   });
 
   it("koreksi densitas: material lebih padat → pass lebih sedikit", () => {

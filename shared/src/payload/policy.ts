@@ -35,7 +35,7 @@ export interface LoadingPolicy {
   suggestedPasses: number;
   /** Payload efektif bila mengikuti suggestedPasses (kg). */
   effectivePayloadKg: number;
-  /** Band target [95% .. 110%] × target (kg). */
+  /** Band target [85% .. 100%] × target (kg). */
   targetBandKg: [number, number];
 }
 

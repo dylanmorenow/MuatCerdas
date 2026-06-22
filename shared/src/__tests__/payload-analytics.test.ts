@@ -19,21 +19,21 @@ const ev = (
   status: "ok", // sengaja salah/diabaikan — analitik menghitung dari measured/target
 });
 
-// SR-V1: <95% under · 95–110% ok · >110% over.
+// SR-V1: <85% under · 85–100% ok · >100% over.
 describe("classifyPayload SR-V1 (batas)", () => {
-  it("<95% → under", () => expect(classifyPayload(86_000, T)).toBe("under"));
-  it("=95% → ok (inklusif)", () => expect(classifyPayload(86_450, T)).toBe("ok"));
-  it("=110% → ok (inklusif)", () => expect(classifyPayload(100_100, T)).toBe("ok"));
-  it(">110% → over", () => expect(classifyPayload(100_200, T)).toBe("over"));
+  it("<85% → under", () => expect(classifyPayload(76_000, T)).toBe("under")); // 83,5%
+  it("=85% → ok (inklusif)", () => expect(classifyPayload(0.85 * T, T)).toBe("ok"));
+  it("=100% → ok (inklusif)", () => expect(classifyPayload(T, T)).toBe("ok"));
+  it(">100% → over", () => expect(classifyPayload(91_100, T)).toBe("over"));
   it("target ≤ 0 → error", () => expect(() => classifyPayload(1000, 0)).toThrow());
 });
 
 describe("payloadStats §12.3", () => {
   const events = [
-    ev("1", "HD-1", "OP-1", 80_000), // under
-    ev("2", "HD-1", "OP-1", 91_000), // ok
-    ev("3", "HD-2", "OP-2", 100_000), // ok
-    ev("4", "HD-2", "OP-2", 105_000), // over
+    ev("1", "HD-1", "OP-1", 70_000), // under (76,9%)
+    ev("2", "HD-1", "OP-1", 90_000), // ok (98,9%)
+    ev("3", "HD-2", "OP-2", 86_000), // ok (94,5%)
+    ev("4", "HD-2", "OP-2", 98_000), // over (107,7%)
   ];
   const s = payloadStats(events);
 
@@ -47,7 +47,7 @@ describe("payloadStats §12.3", () => {
     expect(s.overPct).toBeCloseTo(0.25, 6);
   });
   it("mean payload (kg) & stdev > 0", () => {
-    expect(s.mean).toBe(94_000);
+    expect(s.mean).toBe(86_000);
     expect(s.stdev).toBeGreaterThan(0);
   });
   it("mengabaikan event.status tersimpan", () => {

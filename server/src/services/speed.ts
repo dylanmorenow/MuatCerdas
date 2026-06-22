@@ -23,10 +23,13 @@ import {
   latestMassPerUnit,
   roadOpsSpeedFactor,
   roadOpsConditionLabel,
+  actualVsSafeStatus,
   type RoadOpsCondition,
+  type SpeedActualStatus,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { zoneConditionMap } from "./zones";
+import { getFleetTelemetry } from "./telemetry";
 
 // ——————————————————————————————————————————————————————————————
 // Tipe keluaran
@@ -53,6 +56,10 @@ export interface SpeedUnitRow {
   /** Zona operasi & kondisi jalannya (ADMIN-8) — memengaruhi kecepatan aman. */
   zone: string | null;
   zoneCondition: string;
+  /** Kecepatan AKTUAL dari GPS (km/jam). null bila telemetri belum tersedia. */
+  actualSpeedKmh: number | null;
+  /** Status aktual vs batas aman (basis spidometer). */
+  actualStatus: SpeedActualStatus;
 }
 
 export interface Hd785SpeedRow {
@@ -70,6 +77,9 @@ export interface Hd785SpeedRow {
   reason: string;
   /** Kondisi jalan zona site in-pit (memengaruhi kecepatan HD785). */
   zoneCondition: string;
+  /** Kecepatan AKTUAL dari GPS (km/jam). null bila telemetri belum tersedia. */
+  actualSpeedKmh: number | null;
+  actualStatus: SpeedActualStatus;
 }
 
 export interface SpeedOverview {
@@ -165,6 +175,8 @@ export function buildSpeedUnitRow(args: {
     reason: reasonText(payloadT, targetT, vTravel),
     zone: null, // diisi getSpeedOverview dari Unit.zone + kondisi jalan (ADMIN-8)
     zoneCondition: "normal",
+    actualSpeedKmh: null, // diisi getSpeedOverview dari telemetri GPS
+    actualStatus: "none",
   };
 }
 
@@ -200,6 +212,8 @@ export function buildHd785Row(args: {
     overTarget: unit.payloadKg > unit.targetKg,
     reason: reasonText(payloadT, targetT, vTravel),
     zoneCondition: "normal", // diisi getSpeedOverview dari kondisi jalan zona "site" (item 7)
+    actualSpeedKmh: null, // diisi getSpeedOverview dari telemetri GPS
+    actualStatus: "none",
   };
 }
 
@@ -410,13 +424,23 @@ function applyHd785ZoneCondition(u: Hd785SpeedRow, condition: RoadOpsCondition):
   };
 }
 
+/** Lampirkan kecepatan AKTUAL GPS + status (vs batas aman SETELAH koreksi zona). Tak ubah rumus TKPH. */
+function attachActual<T extends { vmaxSafeTravelKmh: number; actualSpeedKmh: number | null; actualStatus: SpeedActualStatus }>(
+  row: T,
+  actualKmh: number | undefined,
+): T {
+  if (actualKmh === undefined) return row;
+  return { ...row, actualSpeedKmh: actualKmh, actualStatus: actualVsSafeStatus(actualKmh, row.vmaxSafeTravelKmh) };
+}
+
 export async function getSpeedOverview(): Promise<SpeedOverview> {
-  const [massByUnit, zoneCond, zoneByUnit, params, catalog] = await Promise.all([
+  const [massByUnit, zoneCond, zoneByUnit, params, catalog, telemetry] = await Promise.all([
     operatorMassKgByUnit(),
     zoneConditionMap(),
     haulZoneByUnit(),
     loadSpeedParams(),
     loadCatalog(),
+    getFleetTelemetry(),
   ]);
   const [haulUnits, hd785Units] = await Promise.all([
     haulUnitInputs(massByUnit, params.haulPayloadCapacityTon),
@@ -429,10 +453,14 @@ export async function getSpeedOverview(): Promise<SpeedOverview> {
     hd785Units,
     haulUnitCount: params.haulUnitCount,
   });
-  // Kondisi jalan per zona menyetir kecepatan aman tiap unit (selain muatan).
-  overview.units = overview.units.map((u) => applyZoneCondition(u, zoneByUnit, zoneCond));
+  // Kondisi jalan per zona menyetir kecepatan aman tiap unit (selain muatan), lalu kecepatan AKTUAL GPS.
+  overview.units = overview.units.map((u) =>
+    attachActual(applyZoneCondition(u, zoneByUnit, zoneCond), telemetry.get(u.id)?.groundSpeedKmh),
+  );
   const siteCondition = (zoneCond.site as RoadOpsCondition) ?? "normal";
-  overview.hd785 = overview.hd785.map((u) => applyHd785ZoneCondition(u, siteCondition));
+  overview.hd785 = overview.hd785.map((u) =>
+    attachActual(applyHd785ZoneCondition(u, siteCondition), telemetry.get(u.id)?.groundSpeedKmh),
+  );
   return overview;
 }
 

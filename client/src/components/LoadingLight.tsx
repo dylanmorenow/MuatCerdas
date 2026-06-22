@@ -13,13 +13,13 @@ const META: Record<LoadingStatus, { ring: string; dot: string; label: string; su
     ring: "border-amber-300 bg-amber-50",
     dot: "bg-amber-400",
     label: "KUNING",
-    sub: "Sudah masuk target (95 sampai 110%), bersiap berhenti",
+    sub: "Sudah masuk target (85 sampai 100%), bersiap berhenti",
   },
   red: {
     ring: "border-red-300 bg-red-50",
     dot: "bg-red-500",
     label: "MERAH, STOP",
-    sub: "Muatan berlebih (di atas 110% target)",
+    sub: "Muatan berlebih (di atas 100% target)",
   },
 };
 

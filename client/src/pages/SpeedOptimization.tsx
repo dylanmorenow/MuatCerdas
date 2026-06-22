@@ -11,6 +11,7 @@ import {
   ROAD_OPS_CONDITIONS,
   type SpeedParams,
   type RoadOpsCondition,
+  type SpeedActualStatus,
 } from "@muatcerdas/shared";
 import { useSpeed, useSaveSpeedParams, useResetSpeedParams, type SpeedUnitRow, type Hd785SpeedRow } from "../api/speed";
 import { useZones, useSetZoneCondition } from "../api/zones";
@@ -86,7 +87,7 @@ export function SpeedOptimization() {
     <>
       <PageHeader
         title="Kecepatan Aman"
-        subtitle="Batas kecepatan aman berdasarkan beban yang ditanggung ban, dibandingkan dengan target produksi. Dihitung dengan rumus pasti, bukan tebakan AI. Semua angka adalah asumsi yang bisa diubah."
+        subtitle="Batas kecepatan aman berdasarkan beban yang ditanggung ban, dibandingkan dengan target produksi. Dihitung dengan rumus pasti, bukan tebakan AI. Kolom Aktual (GPS) memakai kecepatan sebenarnya dari telemetri (perpindahan koordinat), bukan spidometer. Semua angka adalah asumsi yang bisa diubah."
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -207,10 +208,10 @@ export function SpeedOptimization() {
         <div className="space-y-4">
           {/* Pakai <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan maksimum untuk driver</div>
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan aman untuk driver (aktual GPS)</div>
             <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravel)}</div>
             <div className="mt-1 text-xs text-emerald-50">
-              ini kecepatan di spidometer. Sama dengan {kmh(vmaxWork)} rata-rata kerja.
+              ini kecepatan aktual (dibaca GPS), setara {kmh(vmaxWork)} rata-rata kerja.
             </div>
             <div className="mt-3 border-t border-white/30 pt-3 text-sm text-emerald-50">
               {conflict
@@ -223,7 +224,7 @@ export function SpeedOptimization() {
             <h2 className="mb-2 font-semibold text-slate-800">Penyamaan satuan kecepatan</h2>
             <p className="text-xs text-slate-500">
               Keputusan dibandingkan memakai <b>kecepatan rata-rata kerja</b> (termasuk waktu berhenti). Angka untuk
-              driver diubah ke <b>kecepatan di spidometer</b> memakai porsi waktu jalan {formatNumber(prod.travelFraction, 3)}.
+              driver dinyatakan sebagai <b>kecepatan aktual saat bergerak (GPS)</b> memakai porsi waktu jalan {formatNumber(prod.travelFraction, 3)}.
             </p>
           </Card>
         </div>
@@ -252,7 +253,8 @@ export function SpeedOptimization() {
                 <th className="px-4 py-2.5 font-medium">Beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Beban vs batas</th>
                 <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
-                <th className="px-4 py-2.5 font-medium">Maks (spidometer)</th>
+                <th className="px-4 py-2.5 font-medium">Maks aman (aktual)</th>
+                <th className="px-4 py-2.5 font-medium">Aktual (GPS)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -283,7 +285,8 @@ export function SpeedOptimization() {
                 <th className="px-4 py-2.5 font-medium">Beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Batas beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
-                <th className="px-4 py-2.5 font-medium">Maks (spidometer)</th>
+                <th className="px-4 py-2.5 font-medium">Maks aman (aktual)</th>
+                <th className="px-4 py-2.5 font-medium">Aktual (GPS)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -298,7 +301,8 @@ export function SpeedOptimization() {
 
       <p className="mt-4 text-xs text-slate-400">
         Catatan jujur. Semua angka di sini adalah asumsi. Angka batas beban tiap merek ban masih perlu dicari dari brosur
-        pabrik. Hasil dihitung dari data contoh atau data yang diunggah, bukan dari alat langsung di truk.
+        pabrik. Kecepatan Aktual (GPS) berasal dari telemetri simulasi (mewakili tracker GNSS/feed FMS di tiap truk); arsitektur
+        siap disambung ke perangkat nyata, bukan feed satelit langsung sekarang. Hasil dihitung dari data contoh atau data yang diunggah.
       </p>
     </>
   );
@@ -325,11 +329,20 @@ function UnitRow({ u }: { u: SpeedUnitRow }) {
       <td className="px-4 py-2.5 text-slate-600">{formatNumber(u.tkphSite, 0)} / {formatNumber(u.tkphTire, 0)}</td>
       <td className="px-4 py-2.5 text-slate-600">{kmh(u.vmaxSafeWorkKmh)}</td>
       <td className="px-4 py-2.5 font-medium text-slate-800">{kmh(u.vmaxSafeTravelKmh)}</td>
+      <ActualCell kmh={u.actualSpeedKmh} status={u.actualStatus} />
       <td className="px-4 py-2.5">
         {u.exceedsRequired ? <Badge tone="red">di atas batas</Badge> : <Badge tone="green">aman</Badge>}
       </td>
     </tr>
   );
+}
+
+/** Sel kecepatan AKTUAL GPS, diwarnai sesuai status terhadap batas aman. */
+function ActualCell({ kmh: k, status }: { kmh: number | null; status: SpeedActualStatus }) {
+  if (k == null) return <td className="px-4 py-2.5 text-slate-400">-</td>;
+  const tone =
+    status === "over" ? "text-red-600 font-bold" : status === "near" ? "text-amber-600 font-semibold" : "text-slate-800 font-medium";
+  return <td className={cx("px-4 py-2.5", tone)}>{kmh(k)}</td>;
 }
 
 function Hd785Row({ u }: { u: Hd785SpeedRow }) {
@@ -341,6 +354,7 @@ function Hd785Row({ u }: { u: Hd785SpeedRow }) {
       <td className="px-4 py-2.5 text-slate-600">{formatNumber(u.tkphTire, 0)}</td>
       <td className="px-4 py-2.5 text-slate-600">{kmh(u.vmaxSafeWorkKmh)}</td>
       <td className="px-4 py-2.5 font-medium text-slate-800">{kmh(u.vmaxSafeTravelKmh)}</td>
+      <ActualCell kmh={u.actualSpeedKmh} status={u.actualStatus} />
       <td className="px-4 py-2.5">
         {u.overTarget ? <Badge tone="amber">overload</Badge> : <Badge tone="green">ok</Badge>}
       </td>

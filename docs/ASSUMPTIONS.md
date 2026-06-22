@@ -34,7 +34,7 @@
 | `fuelCostPerTripIdr` | placeholder | Log bahan bakar KPP | KPP | 🟡 |
 | `overloadWearCostFactorIdr` | placeholder | Data biaya maintenance KPP + estimasi teknik | KPP/ESTIMASI | 🔴 |
 | Harga & umur ban HD785 | placeholder | Procurement KPP (ban off-highway, beda dari truk jalan) | KPP | 🟡 |
-| Ambang status (under<95%, over>110%) | 95% / 110% | Kebijakan KPP (boleh disesuaikan) | KPP | ⚪ |
+| Ambang status (under<85%, over>100%) | 85% / 100% | Kebijakan KPP (boleh disesuaikan) | KPP | ⚪ |
 
 ## C. Prediksi umur ban (Modul A — model)
 | Parameter | Placeholder | Sumber data riil | Tipe | Kritis |

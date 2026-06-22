@@ -34,9 +34,10 @@ model Unit {
 }
 
 model Operator {
-  id    String @id
-  name  String
-  shift String // "day" | "night"
+  id     String  @id
+  name   String
+  shift  String // "day" | "night"
+  unitId String? // unit kendaraan yang dipegang operator (Revisi #6); null bila belum ditetapkan
 
   tripLogs      TripLog[]
   payloadEvents PayloadEvent[]

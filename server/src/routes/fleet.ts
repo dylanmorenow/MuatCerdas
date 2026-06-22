@@ -7,9 +7,9 @@ export async function fleetRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/operators", async () => listOperators());
 
   app.post("/api/operators", async (request, reply) => {
-    const b = (request.body ?? {}) as { name?: string; shift?: string };
+    const b = (request.body ?? {}) as { name?: string; shift?: string; unitId?: string | null };
     try {
-      return await addOperator({ name: b.name, shift: b.shift });
+      return await addOperator({ name: b.name, shift: b.shift, unitId: b.unitId });
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });
     }

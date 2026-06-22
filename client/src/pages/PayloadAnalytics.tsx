@@ -116,9 +116,9 @@ export function PayloadAnalytics() {
           {/* KPI */}
           <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Stat label="Total catatan muatan" value={formatNumber(data.overall.count)} hint={`rata-rata ${formatTon(data.overall.mean)}`} />
-            <Stat label="Muatan kurang (di bawah 95%)" value={<span className="text-amber-600">{formatPersen(data.overall.underPct)}</span>} hint={`${formatNumber(data.overall.underCount)} catatan`} />
-            <Stat label="Muatan pas (95 sampai 110%)" value={<span className="text-emerald-600">{formatPersen(data.overall.okPct)}</span>} hint={`${formatNumber(data.overall.okCount)} catatan`} />
-            <Stat label="Muatan berlebih (di atas 110%)" value={<span className="text-red-600">{formatPersen(data.overall.overPct)}</span>} hint={`${formatNumber(data.overall.overCount)} catatan`} />
+            <Stat label="Muatan kurang (di bawah 85%)" value={<span className="text-amber-600">{formatPersen(data.overall.underPct)}</span>} hint={`${formatNumber(data.overall.underCount)} catatan`} />
+            <Stat label="Muatan pas (85 sampai 100%)" value={<span className="text-emerald-600">{formatPersen(data.overall.okPct)}</span>} hint={`${formatNumber(data.overall.okCount)} catatan`} />
+            <Stat label="Muatan berlebih (di atas 100%)" value={<span className="text-red-600">{formatPersen(data.overall.overPct)}</span>} hint={`${formatNumber(data.overall.overCount)} catatan`} />
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

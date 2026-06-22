@@ -22,11 +22,17 @@ export interface RoadMapHazard {
   coveragePct: number;
   urgent: boolean;
 }
+export interface RoadMapLivePosition {
+  unitId: string;
+  progressKm: number;
+  groundSpeedKmh: number;
+}
 export interface RoadMapData {
   segments: RoadMapSegment[];
   hazards: RoadMapHazard[];
   routeLengthKm: number;
   mappers: { leadUnitId: string | null; lastUnitId: string | null };
+  livePositions: RoadMapLivePosition[];
   lastUpdated: string;
   source: string;
   startLabel: string;
@@ -39,6 +45,7 @@ export function useRoadMap(area: MapArea = "haul") {
   return useQuery({
     queryKey: ["roadmap", area],
     queryFn: () => apiGet<RoadMapData>(`/api/roadmap?area=${area}`),
+    refetchInterval: 5000, // penanda truk live bergerak dari telemetri GPS
   });
 }
 

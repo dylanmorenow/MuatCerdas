@@ -566,6 +566,8 @@ async function main(): Promise<void> {
     "Bridgestone M840": { idealLifeKm: 110_000, sizeSpec: "315/80R22.5", loadRating: "156/150 K" },
     "Michelin X Multi D": { idealLifeKm: 105_000, sizeSpec: "315/80R22.5", loadRating: "154/150 L" },
     "Bridgestone L355": { idealLifeKm: 115_000, sizeSpec: "315/80R22.5", loadRating: "156/150 K" },
+    "Bridgestone L317": { idealLifeKm: 115_000, sizeSpec: "325/95R24", loadRating: "162/160 K" },
+    "Pirelli TQ01": { idealLifeKm: 95_000, sizeSpec: "13.00R24", loadRating: "176/172 J" },
     "Bridgestone VRPS 27.00R49": { idealLifeKm: 90_000, sizeSpec: "27.00R49", loadRating: "E-4" },
   };
   await prisma.tkphCatalog.createMany({

@@ -1,8 +1,16 @@
 // Revisi F3 — peta bahaya jalan LiDAR (prototipe). Strip rute KM33→Jetty bersegmen (warna kondisi)
 // + penanda bahaya per posisi km (warna per tipe) dgn penataan lane anti-tumpang-tindih + legenda.
 // Data SIMULASI mewakili keluaran LiDAR (truk pemeta lead/last) — BUKAN feed live.
-import { conditionColor, hazardColor, hazardLabel, type HazardType } from "@muatcerdas/shared";
-import type { RoadMapData } from "../api/roadmap";
+import { conditionColor, hazardColor, hazardLabel, type HazardType, type SpeedActualStatus } from "@muatcerdas/shared";
+import type { RoadMapData, RoadMapLivePosition } from "../api/roadmap";
+
+// Warna penanda truk live menurut status kecepatan aktual vs batas aman.
+const ACTUAL_COLOR: Record<SpeedActualStatus, string> = {
+  ok: "#059669",
+  near: "#d97706",
+  over: "#dc2626",
+  none: "#0E4D92",
+};
 
 const W = 760;
 const PAD = 14;
@@ -15,8 +23,20 @@ const MAX_LANES = 5;
 const GAP = 15; // jarak min horizontal antar penanda dalam satu lane
 const BAR_H = 22;
 
-export function HazardMap({ data }: { data: RoadMapData }) {
+export function HazardMap({
+  data,
+  live,
+  selfUnitId = null,
+  selfStatus = "none",
+}: {
+  data: RoadMapData;
+  /** Penanda truk live (GPS). Default: data.livePositions. Driver kirim hanya unitnya. */
+  live?: RoadMapLivePosition[];
+  selfUnitId?: string | null;
+  selfStatus?: SpeedActualStatus;
+}) {
   const { segments, hazards, mappers } = data;
+  const trucks = live ?? data.livePositions ?? [];
   const total = data.routeLengthKm || segments.reduce((s, x) => s + x.lengthKm, 0) || 1;
   const xOf = (km: number) => PAD + (Math.min(Math.max(km, 0), total) / total) * INNER_W;
 
@@ -119,6 +139,27 @@ export function HazardMap({ data }: { data: RoadMapData }) {
             </g>
           );
         })}
+
+        {/* Truk live (GPS simulasi) — penanda bergerak pada strip; truk sendiri (driver) disorot per status */}
+        {trucks.map((t) => {
+          const isSelf = selfUnitId != null && t.unitId === selfUnitId;
+          const tcx = xOf(t.progressKm);
+          const tcy = stripY + BAR_H / 2;
+          const color = isSelf ? ACTUAL_COLOR[selfStatus] : "#1e3a8a";
+          const tr = isSelf ? 6 : 3.4;
+          return (
+            <g key={`truck-${t.unitId}`}>
+              <circle cx={tcx} cy={tcy} r={tr} fill={color} stroke="#fff" strokeWidth={isSelf ? 2 : 1.2} opacity={isSelf ? 1 : 0.85}>
+                <title>{t.unitId} · {t.groundSpeedKmh.toFixed(0)} km/jam (GPS) · KM {t.progressKm.toFixed(1)}</title>
+              </circle>
+              {isSelf && (
+                <text x={tcx} y={tcy - tr - 4} fontSize="9" fontWeight="bold" textAnchor="middle" fill={color}>
+                  {t.unitId} · {t.groundSpeedKmh.toFixed(0)} km/jam
+                </text>
+              )}
+            </g>
+          );
+        })}
       </svg>
 
       {/* legenda */}
@@ -136,6 +177,12 @@ export function HazardMap({ data }: { data: RoadMapData }) {
         </svg>
         Bentuk segitiga = perlu tindakan segera <span className="text-slate-400">({urgentCount})</span>
       </div>
+      {trucks.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-900" />
+          Posisi truk live dari GPS <span className="text-slate-400">({trucks.length})</span>
+        </div>
+      )}
     </div>
   );
 }

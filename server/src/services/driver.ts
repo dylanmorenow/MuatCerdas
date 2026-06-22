@@ -1,12 +1,20 @@
 // Modul D — bundle data driver (FR-0004-4). REUSE service Modul A/B/C (tanpa duplikasi logika §9):
 // kecepatan (speed), status ban (tire), payload+kalibrasi (payload), target produksi, peta jalan.
 
-import { classifyPayload, type PayloadStatus } from "@muatcerdas/shared";
+import {
+  classifyPayload,
+  actualVsSafeStatus,
+  hazardProximity,
+  type PayloadStatus,
+  type SpeedActualStatus,
+  type HazardProximity,
+} from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { getSpeedOverview } from "./speed";
 import { getTireUnitDetail } from "./tire";
 import { getCalibrationHealth } from "./payload";
 import { getRoadMap, type RoadMapData } from "./roadmap";
+import { getFleetTelemetry } from "./telemetry";
 
 export interface DriverBundle {
   unit: { id: string; model: string; category: string };
@@ -34,6 +42,17 @@ export interface DriverBundle {
   calibration: { needsCalibration: boolean; ageDays: number; scaleStudyOffsetPct: number } | null;
   production: { dailyTargetTon: number; unitShareTon: number; perTripPayloadT: number };
   roadMap: RoadMapData;
+  /** Kecepatan AKTUAL GPS (km/jam) berbasis perpindahan koordinat — pengganti spidometer. */
+  telemetry: {
+    groundSpeedKmh: number;
+    progressKm: number;
+    routeLengthKm: number;
+    actualStatus: SpeedActualStatus;
+    vmaxSafeTravelKmh: number | null;
+    capturedAt: string;
+  } | null;
+  /** Kedekatan ke bahaya peta jalan, digerakkan posisi GPS. */
+  hazardAhead: HazardProximity | null;
 }
 
 export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
@@ -42,7 +61,11 @@ export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
 
   const isHaul = unit.category === "haul_truck";
   // HD785 berada di rute in-pit (site), bukan rute hauling KM33→Jetty.
-  const [speedOverview, roadMap] = await Promise.all([getSpeedOverview(), getRoadMap(isHaul ? "haul" : "site")]);
+  const [speedOverview, roadMap, telemetryMap] = await Promise.all([
+    getSpeedOverview(),
+    getRoadMap(isHaul ? "haul" : "site"),
+    getFleetTelemetry(),
+  ]);
 
   const speedRow = isHaul
     ? speedOverview.units.find((u) => u.id === unitId)
@@ -96,6 +119,26 @@ export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
     perTripPayloadT: speedRow?.payloadT ?? 0,
   };
 
+  // Kecepatan AKTUAL GPS + kedekatan bahaya (digerakkan posisi GPS). Sumber: telemetri (simulasi GNSS).
+  const tel = telemetryMap.get(unitId);
+  const vmaxTravel = speedRow?.vmaxSafeTravelKmh ?? null;
+  const telemetry = tel
+    ? {
+        groundSpeedKmh: tel.groundSpeedKmh,
+        progressKm: tel.progressKm,
+        routeLengthKm: tel.routeLengthKm,
+        actualStatus: vmaxTravel != null ? actualVsSafeStatus(tel.groundSpeedKmh, vmaxTravel) : ("none" as SpeedActualStatus),
+        vmaxSafeTravelKmh: vmaxTravel,
+        capturedAt: tel.capturedAt,
+      }
+    : null;
+  const hazardAhead = tel
+    ? hazardProximity(
+        tel.progressKm,
+        roadMap.hazards.map((h) => ({ positionKm: h.positionKm, type: h.type, urgent: h.urgent })),
+      )
+    : null;
+
   return {
     unit: { id: unit.id, model: unit.model, category: unit.category },
     speed: speedRow
@@ -112,5 +155,7 @@ export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
     calibration,
     production,
     roadMap,
+    telemetry,
+    hazardAhead,
   };
 }
