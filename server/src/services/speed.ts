@@ -24,6 +24,9 @@ import {
   roadOpsSpeedFactor,
   roadOpsConditionLabel,
   actualVsSafeStatus,
+  clampSpeedKmh,
+  HAUL_SPEED_CEILING_KMH,
+  HD785_SPEED_CEILING_KMH,
   type RoadOpsCondition,
   type SpeedActualStatus,
 } from "@muatcerdas/shared";
@@ -424,6 +427,20 @@ function applyHd785ZoneCondition(u: Hd785SpeedRow, condition: RoadOpsCondition):
   };
 }
 
+/**
+ * Clamp kecepatan TAMPILAN ke batas atas absolut unit (hard ceiling) — output dinamis muatan tetap
+ * dihitung penuh, hanya dipotong di sini sebelum tampil/alarm. Tidak menyentuh keputusan/exceedsRequired
+ * (sudah dihitung dari nilai dinamis di builder & fleet). work ≤ travel ≤ ceiling tetap terjaga.
+ */
+function clampRowCeiling<T extends { vmaxSafeWorkKmh: number; vmaxSafeTravelKmh: number }>(
+  row: T,
+  ceilingKmh: number,
+): T {
+  const travel = roundKmh(clampSpeedKmh(row.vmaxSafeTravelKmh, ceilingKmh));
+  const work = roundKmh(Math.min(row.vmaxSafeWorkKmh, travel));
+  return { ...row, vmaxSafeWorkKmh: work, vmaxSafeTravelKmh: travel };
+}
+
 /** Lampirkan kecepatan AKTUAL GPS + status (vs batas aman SETELAH koreksi zona). Tak ubah rumus TKPH. */
 function attachActual<T extends { vmaxSafeTravelKmh: number; actualSpeedKmh: number | null; actualStatus: SpeedActualStatus }>(
   row: T,
@@ -453,13 +470,20 @@ export async function getSpeedOverview(): Promise<SpeedOverview> {
     hd785Units,
     haulUnitCount: params.haulUnitCount,
   });
-  // Kondisi jalan per zona menyetir kecepatan aman tiap unit (selain muatan), lalu kecepatan AKTUAL GPS.
+  // Urutan: kondisi jalan zona → CLAMP batas atas absolut (45 haul / 50 HD785) → status AKTUAL GPS.
+  // Clamp sebelum attachActual agar alarm overspeed merujuk pada batas atas yang sudah dipotong.
   overview.units = overview.units.map((u) =>
-    attachActual(applyZoneCondition(u, zoneByUnit, zoneCond), telemetry.get(u.id)?.groundSpeedKmh),
+    attachActual(
+      clampRowCeiling(applyZoneCondition(u, zoneByUnit, zoneCond), HAUL_SPEED_CEILING_KMH),
+      telemetry.get(u.id)?.groundSpeedKmh,
+    ),
   );
   const siteCondition = (zoneCond.site as RoadOpsCondition) ?? "normal";
   overview.hd785 = overview.hd785.map((u) =>
-    attachActual(applyHd785ZoneCondition(u, siteCondition), telemetry.get(u.id)?.groundSpeedKmh),
+    attachActual(
+      clampRowCeiling(applyHd785ZoneCondition(u, siteCondition), HD785_SPEED_CEILING_KMH),
+      telemetry.get(u.id)?.groundSpeedKmh,
+    ),
   );
   return overview;
 }

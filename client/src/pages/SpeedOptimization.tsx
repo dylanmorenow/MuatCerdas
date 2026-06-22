@@ -9,6 +9,8 @@ import {
   decideSpeed,
   roadOpsConditionLabel,
   ROAD_OPS_CONDITIONS,
+  clampSpeedKmh,
+  HAUL_SPEED_CEILING_KMH,
   type SpeedParams,
   type RoadOpsCondition,
   type SpeedActualStatus,
@@ -61,6 +63,9 @@ export function SpeedOptimization() {
   const repTkphTire = tkphTire(fi.avgCatalogTkph, form.tempCorrectionFactor, form.siteCorrectionFactor);
   const vmaxWork = vmaxSafeWorkKmh(repTkphTire, repQa);
   const vmaxTravel = workAvgToTravel(vmaxWork, prod.travelFraction);
+  // Rekomendasi yang DITAMPILKAN ke driver dipotong ke batas atas absolut hauling (output clamp).
+  // decideSpeed di bawah tetap memakai nilai dinamis (vmaxWork/vmaxTravel) — keputusan tak berubah.
+  const vmaxTravelCapped = clampSpeedKmh(vmaxTravel, HAUL_SPEED_CEILING_KMH);
   const decision = decideSpeed({
     vRequiredWorkKmh: prod.vRequiredWorkKmh,
     vmaxSafeWorkKmh: vmaxWork,
@@ -209,9 +214,9 @@ export function SpeedOptimization() {
           {/* Pakai <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
             <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan aman untuk driver (aktual GPS)</div>
-            <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravel)}</div>
+            <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravelCapped)}</div>
             <div className="mt-1 text-xs text-emerald-50">
-              ini kecepatan aktual (dibaca GPS), setara {kmh(vmaxWork)} rata-rata kerja.
+              kecepatan aktual maksimum (dibaca GPS), dibatasi {HAUL_SPEED_CEILING_KMH} km/jam untuk truk hauling.
             </div>
             <div className="mt-3 border-t border-white/30 pt-3 text-sm text-emerald-50">
               {conflict
@@ -238,7 +243,7 @@ export function SpeedOptimization() {
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
             Per unit truk hauling
-            <InfoTip text="Kecepatan maksimum dihitung dari muatan dan ban tiap unit, lalu disesuaikan dengan kondisi jalan di zonanya. Tabel memakai angka yang tersimpan. Klik Simpan untuk memperbarui." />
+            <InfoTip text="Kecepatan maksimum dihitung dari muatan dan ban tiap unit, lalu disesuaikan dengan kondisi jalan di zonanya, dan terakhir dipotong ke batas atas absolut 45 km/jam (truk hauling). Tabel memakai angka yang tersimpan. Klik Simpan untuk memperbarui." />
           </h2>
           <span className="text-xs text-slate-400">{data.units.length} unit</span>
         </div>
@@ -272,7 +277,7 @@ export function SpeedOptimization() {
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="font-semibold text-slate-800">
             HD785: kecepatan maksimum dari muatan
-            <InfoTip text="Ringkasan untuk HD785. Dari muatan dihitung beban ban lalu kecepatan maksimum aman. Tanpa hitungan target produksi, karena itu khusus truk hauling." />
+            <InfoTip text="Ringkasan untuk HD785. Dari muatan dihitung beban ban lalu kecepatan maksimum aman, dipotong ke batas atas absolut 50 km/jam (HD785 in-pit). Tanpa hitungan target produksi, karena itu khusus truk hauling." />
           </h2>
           <span className="text-xs text-slate-400">{data.hd785.length} unit</span>
         </div>
