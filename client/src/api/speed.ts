@@ -6,6 +6,7 @@ import type {
   SpeedDecision,
   ProductionSpeedResult,
   SpeedActualStatus,
+  SpeedViolationLevel,
 } from "@muatcerdas/shared";
 import { apiGet, apiSend } from "./client";
 
@@ -26,8 +27,12 @@ export interface SpeedUnitRow {
   reason: string;
   zone: string | null;
   zoneCondition: string;
+  optimalSpeedKmh: number;
+  dangerCeilingKmh: number;
+  overloaded: boolean;
   actualSpeedKmh: number | null;
   actualStatus: SpeedActualStatus;
+  actualViolation: SpeedViolationLevel;
 }
 
 export interface Hd785SpeedRow {
@@ -43,8 +48,12 @@ export interface Hd785SpeedRow {
   vmaxSafeTravelKmh: number;
   overTarget: boolean;
   reason: string;
+  optimalSpeedKmh: number;
+  dangerCeilingKmh: number;
+  overloaded: boolean;
   actualSpeedKmh: number | null;
   actualStatus: SpeedActualStatus;
+  actualViolation: SpeedViolationLevel;
 }
 
 export interface SpeedOverview {
@@ -53,6 +62,7 @@ export interface SpeedOverview {
   vmKmh: number;
   fleetInputs: { unitCount: number; payloadPerUnitTon: number; avgTareKg: number; avgCatalogTkph: number };
   production: ProductionSpeedResult & { payloadPerUnitTon: number; unitCount: number };
+  hd785Production: ProductionSpeedResult & { payloadPerUnitTon: number; unitCount: number };
   fleet: {
     representativeQaT: number;
     representativeTkphTire: number;

@@ -168,6 +168,13 @@ model SpeedParams {
   dailyTargetTon           Float
   haulUnitCount            Int   @default(95)
   haulPayloadCapacityTon   Float @default(120)
+  // — Armada & produksi HD785 in-pit (Revisi item 2) —
+  hd785UnitCount               Int   @default(12)
+  hd785PayloadCapacityTon      Float @default(91)
+  hd785DailyTargetTon          Float @default(40000)
+  hd785EffectiveWorkHoursPerDay Float @default(20)
+  hd785FixedTimeHours          Float @default(0.3)
+  hd785OneWayKm                Float @default(3)
 }
 
 // Katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. Editable (FR-0003-1).

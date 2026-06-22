@@ -477,8 +477,9 @@ async function main(): Promise<void> {
   // Truk hauling: sebagian unit melaporkan massa batubara per 2 bucket.
   for (let i = 0; i < Math.min(8, haulTrucks.length); i++) {
     const h = haulTrucks[i]!;
-    const b1 = Number(rng.range(14, 18).toFixed(1));
-    const b2 = Number(rng.range(14, 18).toFixed(1));
+    // Total kedua bucket sekitar target 120 t (campur under/pas/over untuk demo Item 5).
+    const b1 = Number(rng.range(48, 66).toFixed(1));
+    const b2 = Number(rng.range(48, 66).toFixed(1));
     massRows.push({
       id: `MI-${h.id}-001`,
       unitId: h.id,

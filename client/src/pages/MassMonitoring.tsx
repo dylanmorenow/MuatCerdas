@@ -4,7 +4,8 @@ import { formatNumber, formatTon, materialLabel, classifyPayload, type PayloadSt
 import { useMassMonitoring, useOperatorData, type MassInputRow } from "../api/mass";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
 
-const TARGET_KG = 91_000;
+const TARGET_KG = 91_000; // HD785
+const HAUL_TARGET_KG = 120_000; // truk hauling (total kedua bucket/trailer)
 // Status muatan = acuan data analitik (classifyPayload): <85% underload · 85–100% pas · >100% overload.
 const STATUS_TONE: Record<PayloadStatus, { tone: "amber" | "green" | "red"; label: string }> = {
   under: { tone: "amber", label: "underload" },
@@ -85,6 +86,59 @@ export function MassMonitoring() {
                           <Badge tone={st.tone}>{st.label}</Badge>
                         </td>
                         <td className="px-4 py-2.5 text-slate-600">{r.excavatorOperator ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{r.operatorName}</td>
+                        <td className="px-4 py-2.5 text-xs text-slate-400">{timeAgo(r.timestamp)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Item 5 — muatan truk hauling: total kedua bucket vs 120 t (under/ok/over) */}
+          <Card className="mt-5 overflow-hidden p-0">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <h2 className="font-semibold text-slate-800">
+                Muatan terbaru tiap truk hauling
+                <InfoTip text="Total muatan kedua bucket/trailer truk hauling vs target 120 t. Status: kuning underload (<85%), hijau pas (85–100%), merah overload (>100%)." />
+              </h2>
+              <span className="text-xs text-slate-400">target 120 t</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Unit</th>
+                    <th className="px-4 py-2.5 font-medium">Bucket 1 + 2</th>
+                    <th className="px-4 py-2.5 font-medium">Total muatan</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    <th className="px-4 py-2.5 font-medium">Pelapor</th>
+                    <th className="px-4 py-2.5 font-medium">Waktu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.haul.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                        Belum ada laporan. Operator truk hauling mengirimnya dari halaman driver.
+                      </td>
+                    </tr>
+                  )}
+                  {data.haul.map((r) => {
+                    const st = STATUS_TONE[classifyPayload(r.totalT * 1000, HAUL_TARGET_KG)];
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 font-medium text-slate-700">{r.unitId}</td>
+                        <td className="px-4 py-2.5 text-slate-500">
+                          {r.bucket1T != null || r.bucket2T != null
+                            ? `${formatNumber(r.bucket1T ?? 0, 1)} + ${formatNumber(r.bucket2T ?? 0, 1)} t`
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-2.5 font-medium text-slate-800">{formatTon(r.totalT * 1000)}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge tone={st.tone}>{st.label}</Badge>
+                        </td>
                         <td className="px-4 py-2.5 text-slate-600">{r.operatorName}</td>
                         <td className="px-4 py-2.5 text-xs text-slate-400">{timeAgo(r.timestamp)}</td>
                       </tr>

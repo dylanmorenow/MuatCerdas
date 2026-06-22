@@ -91,23 +91,25 @@ export async function addMassInput(input: AddMassInput): Promise<MassInputRow> {
  */
 export async function getMassMonitoring(today = new Date()): Promise<{
   hd785: MassInputRow[];
+  haul: MassInputRow[];
   todayCoalT: number;
   todayOverburdenT: number;
   reportsToday: number;
 }> {
-  const recs = await prisma.massInput.findMany({
-    where: { category: "pit_dumper" },
-    orderBy: { timestamp: "desc" },
-    take: 500,
-  });
-  const rows = recs.map(toRow);
-  const latest = latestMassPerUnit(rows);
-  const hd785 = Object.values(latest).sort((a, b) => a.unitId.localeCompare(b.unitId));
+  const [hdRecs, haulRecs] = await Promise.all([
+    prisma.massInput.findMany({ where: { category: "pit_dumper" }, orderBy: { timestamp: "desc" }, take: 500 }),
+    prisma.massInput.findMany({ where: { category: "haul_truck" }, orderBy: { timestamp: "desc" }, take: 500 }),
+  ]);
+  const rows = hdRecs.map(toRow);
+  const hd785 = Object.values(latestMassPerUnit(rows)).sort((a, b) => a.unitId.localeCompare(b.unitId));
+  // Item 5: muatan truk hauling (total kedua bucket) — status pas/under/over terhadap 120 t.
+  const haul = Object.values(latestMassPerUnit(haulRecs.map(toRow))).sort((a, b) => a.unitId.localeCompare(b.unitId));
 
   const todays = rows.filter((r) => isSameDay(r.timestamp, today));
   const sum = summarizeMassByMaterial(todays);
   return {
     hd785,
+    haul,
     todayCoalT: Math.round(sum.coalT),
     todayOverburdenT: Math.round(sum.overburdenT),
     reportsToday: todays.length,

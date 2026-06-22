@@ -4,7 +4,7 @@ import {
   formatNumber,
   cyclesRemaining,
   hazardLabel,
-  type SpeedActualStatus,
+  type SpeedViolationLevel,
   type HazardProximity,
 } from "@muatcerdas/shared";
 import { useDriverMe, type DriverBundle } from "../api/driver";
@@ -16,11 +16,11 @@ import { DriverAutoMonitor } from "../components/DriverAutoMonitor";
 
 const CYCLE_KM = 70;
 
-const ACTUAL_TONE: Record<SpeedActualStatus, { bg: string; label: string }> = {
-  ok: { bg: "bg-kpp-blue", label: "AMAN" },
-  near: { bg: "bg-amber-500", label: "MENDEKATI BATAS" },
-  over: { bg: "bg-red-600", label: "DI ATAS BATAS — PELAN" },
-  none: { bg: "bg-slate-600", label: "GPS belum tersedia" },
+// Warna hero kecepatan aktual menurut level pelanggaran vs kecepatan OPTIMAL.
+const VIOLATION_TONE: Record<SpeedViolationLevel, { bg: string; label: string }> = {
+  ok: { bg: "bg-kpp-blue", label: "SESUAI OPTIMAL" },
+  over_optimal: { bg: "bg-amber-500", label: "DI ATAS OPTIMAL — KURANGI" },
+  danger: { bg: "bg-red-600", label: "BAHAYA — DI ATAS BATAS AMAN" },
 };
 
 const PAYLOAD_TONE: Record<string, { bg: string; label: string }> = {
@@ -67,8 +67,8 @@ export function DriverDashboard() {
             {/* Peringatan kedekatan bahaya (digerakkan posisi GPS) */}
             {data.hazardAhead && <HazardBanner p={data.hazardAhead} />}
 
-            {/* Kecepatan AKTUAL dari GPS — pengganti spidometer */}
-            <ActualSpeedHero tel={data.telemetry} reason={data.speed?.reason ?? "data kecepatan belum tersedia"} />
+            {/* Kecepatan optimal + kecepatan AKTUAL dari GPS — pengganti spidometer */}
+            <ActualSpeedHero tel={data.telemetry} />
 
             {/* Massa muatan (HD785) atau Kondisi ban (haul) */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -115,8 +115,9 @@ export function DriverDashboard() {
             <DriverAutoMonitor
               unitId={data.unit.id}
               groundSpeedKmh={data.telemetry?.groundSpeedKmh ?? null}
-              actualStatus={data.telemetry?.actualStatus ?? "none"}
-              vmaxKmh={data.speed?.vmaxSafeTravelKmh ?? null}
+              violation={data.telemetry?.violation ?? "ok"}
+              optimalKmh={data.telemetry?.optimalSpeedKmh ?? null}
+              dangerKmh={data.telemetry?.dangerCeilingKmh ?? null}
               hazard={data.hazardAhead}
               capturedAt={data.telemetry?.capturedAt ?? null}
             />
@@ -147,7 +148,7 @@ export function DriverDashboard() {
   );
 }
 
-function ActualSpeedHero({ tel, reason }: { tel: DriverBundle["telemetry"]; reason: string }) {
+function ActualSpeedHero({ tel }: { tel: DriverBundle["telemetry"] }) {
   const prev = useRef<number | null>(null);
   const speed = tel?.groundSpeedKmh ?? null;
   const delta = speed != null && prev.current != null ? speed - prev.current : 0;
@@ -155,27 +156,43 @@ function ActualSpeedHero({ tel, reason }: { tel: DriverBundle["telemetry"]; reas
     if (speed != null) prev.current = speed;
   }, [speed]);
 
-  const tone = ACTUAL_TONE[tel?.actualStatus ?? "none"];
+  const tone = VIOLATION_TONE[tel?.violation ?? "ok"];
   const trend = delta > 0.3 ? "▲" : delta < -0.3 ? "▼" : "■";
-  const vmax = tel?.vmaxSafeTravelKmh ?? null;
+  const optimal = tel?.optimalSpeedKmh ?? null;
+  const danger = tel?.dangerCeilingKmh ?? null;
 
   return (
-    <div className={cx("rounded-2xl p-6 text-white", tone.bg)}>
-      <div className="flex items-center justify-between">
-        <div className="text-sm uppercase tracking-wide text-white/80">Kecepatan aktual (GPS)</div>
-        <span className="rounded bg-white/15 px-2 py-0.5 text-[10px] text-white/90">
-          dari pergerakan koordinat · bukan spidometer
-        </span>
+    <div className="space-y-3">
+      {/* Kecepatan OPTIMAL yang diperlukan (besar) + keterangan batas bahaya */}
+      <div className="rounded-2xl bg-kpp-green p-6 text-white">
+        <div className="text-sm uppercase tracking-wide text-emerald-100">Kecepatan optimal yang diperlukan</div>
+        <div className="mt-1 flex items-end gap-3">
+          <div className="text-6xl font-extrabold leading-none">{optimal != null ? formatNumber(optimal, 0) : "-"}</div>
+          <div className="pb-1 text-2xl font-semibold">km/jam</div>
+        </div>
+        <div className="mt-2 text-sm text-emerald-50">
+          {danger != null ? `Kecepatan batas bahaya ${formatNumber(danger, 0)} km/jam` : "batas bahaya 45 km/jam"}
+          {tel?.overloaded ? " · muatan overload, kecepatan optimal diturunkan demi ban" : ""}
+        </div>
       </div>
-      <div className="mt-1 flex items-end gap-3">
-        <div className="text-7xl font-extrabold leading-none">{speed != null ? formatNumber(speed, 0) : "-"}</div>
-        <div className="pb-2 text-2xl font-semibold">km/jam</div>
-        {speed != null && <div className="pb-2 text-3xl font-bold text-white/80">{trend}</div>}
+
+      {/* Kecepatan AKTUAL dari GPS, diwarnai pelanggaran vs optimal */}
+      <div className={cx("rounded-2xl p-6 text-white", tone.bg)}>
+        <div className="flex items-center justify-between">
+          <div className="text-sm uppercase tracking-wide text-white/80">Kecepatan aktual (GPS)</div>
+          <span className="rounded bg-white/15 px-2 py-0.5 text-[10px] text-white/90">
+            dari pergerakan koordinat · bukan spidometer
+          </span>
+        </div>
+        <div className="mt-1 flex items-end gap-3">
+          <div className="text-7xl font-extrabold leading-none">{speed != null ? formatNumber(speed, 0) : "-"}</div>
+          <div className="pb-2 text-2xl font-semibold">km/jam</div>
+          {speed != null && <div className="pb-2 text-3xl font-bold text-white/80">{trend}</div>}
+        </div>
+        <div className="mt-2 text-sm font-medium text-white/95">
+          {optimal != null ? `Optimal ${formatNumber(optimal, 0)} km/jam · ${tone.label}` : tone.label}
+        </div>
       </div>
-      <div className="mt-2 text-sm font-medium text-white/95">
-        {vmax != null ? `Batas aman ${formatNumber(vmax, 0)} km/jam · ${tone.label}` : tone.label}
-      </div>
-      <div className="mt-0.5 text-xs text-white/80">{reason}</div>
     </div>
   );
 }

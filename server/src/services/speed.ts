@@ -25,10 +25,13 @@ import {
   roadOpsConditionLabel,
   actualVsSafeStatus,
   clampSpeedKmh,
+  optimalSpeed,
+  speedViolationLevel,
   HAUL_SPEED_CEILING_KMH,
   HD785_SPEED_CEILING_KMH,
   type RoadOpsCondition,
   type SpeedActualStatus,
+  type SpeedViolationLevel,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
 import { zoneConditionMap } from "./zones";
@@ -59,10 +62,18 @@ export interface SpeedUnitRow {
   /** Zona operasi & kondisi jalannya (ADMIN-8) — memengaruhi kecepatan aman. */
   zone: string | null;
   zoneCondition: string;
+  /** Kecepatan OPTIMAL (produksi, overload-adjust) yang ditampilkan & jadi perimeter pelanggaran. */
+  optimalSpeedKmh: number;
+  /** Batas bahaya absolut unit (45 hauling). */
+  dangerCeilingKmh: number;
+  /** true bila muatan > kapasitas pas → optimal diturunkan. */
+  overloaded: boolean;
   /** Kecepatan AKTUAL dari GPS (km/jam). null bila telemetri belum tersedia. */
   actualSpeedKmh: number | null;
-  /** Status aktual vs batas aman (basis spidometer). */
+  /** Status aktual vs kecepatan optimal (untuk warna). */
   actualStatus: SpeedActualStatus;
+  /** Level pelanggaran: ok / over_optimal / danger. */
+  actualViolation: SpeedViolationLevel;
 }
 
 export interface Hd785SpeedRow {
@@ -80,9 +91,15 @@ export interface Hd785SpeedRow {
   reason: string;
   /** Kondisi jalan zona site in-pit (memengaruhi kecepatan HD785). */
   zoneCondition: string;
+  /** Kecepatan OPTIMAL (produksi in-pit, overload-adjust) — perimeter pelanggaran HD785. */
+  optimalSpeedKmh: number;
+  /** Batas bahaya absolut HD785 (50). */
+  dangerCeilingKmh: number;
+  overloaded: boolean;
   /** Kecepatan AKTUAL dari GPS (km/jam). null bila telemetri belum tersedia. */
   actualSpeedKmh: number | null;
   actualStatus: SpeedActualStatus;
+  actualViolation: SpeedViolationLevel;
 }
 
 export interface SpeedOverview {
@@ -92,6 +109,8 @@ export interface SpeedOverview {
   /** Agregat armada haul untuk recompute LIVE di client (pola Finance.derived). */
   fleetInputs: { unitCount: number; payloadPerUnitTon: number; avgTareKg: number; avgCatalogTkph: number };
   production: ProductionSpeedResult & { payloadPerUnitTon: number; unitCount: number };
+  /** Rantai produksi HD785 in-pit (Revisi item 2) untuk kecepatan optimal HD785. */
+  hd785Production: ProductionSpeedResult & { payloadPerUnitTon: number; unitCount: number };
   fleet: {
     representativeQaT: number;
     representativeTkphTire: number;
@@ -147,9 +166,10 @@ export function buildSpeedUnitRow(args: {
   params: SpeedParams;
   vmKmh: number;
   vRequiredWorkKmh: number;
+  vRequiredTravelKmh: number;
   travelFraction: number;
 }): SpeedUnitRow {
-  const { unit, catalogTkph, params, vmKmh, vRequiredWorkKmh, travelFraction } = args;
+  const { unit, catalogTkph, params, vmKmh, vRequiredWorkKmh, vRequiredTravelKmh, travelFraction } = args;
   const { qaT } = criticalTireLoadTonnes({
     tareKg: unit.tareKg,
     payloadKg: unit.payloadKg,
@@ -161,6 +181,13 @@ export function buildSpeedUnitRow(args: {
   const vTravel = workAvgToTravel(vWork, travelFraction);
   const payloadT = unit.payloadKg / 1000;
   const targetT = unit.targetKg / 1000;
+  // Kecepatan OPTIMAL (produksi) + perlambatan overload terhadap kapasitas "pas" hauling (120 t).
+  const opt = optimalSpeed({
+    vRequiredTravelKmh,
+    payloadT,
+    pasCapacityT: params.haulPayloadCapacityTon,
+    ceilingKmh: HAUL_SPEED_CEILING_KMH,
+  });
   return {
     id: unit.id,
     model: unit.model,
@@ -178,8 +205,12 @@ export function buildSpeedUnitRow(args: {
     reason: reasonText(payloadT, targetT, vTravel),
     zone: null, // diisi getSpeedOverview dari Unit.zone + kondisi jalan (ADMIN-8)
     zoneCondition: "normal",
+    optimalSpeedKmh: opt.optimalKmh,
+    dangerCeilingKmh: HAUL_SPEED_CEILING_KMH,
+    overloaded: opt.overloaded,
     actualSpeedKmh: null, // diisi getSpeedOverview dari telemetri GPS
     actualStatus: "none",
+    actualViolation: "ok",
   };
 }
 
@@ -189,8 +220,9 @@ export function buildHd785Row(args: {
   catalogTkph: number;
   params: SpeedParams;
   travelFraction: number;
+  vRequiredTravelKmh: number;
 }): Hd785SpeedRow {
-  const { unit, catalogTkph, params, travelFraction } = args;
+  const { unit, catalogTkph, params, travelFraction, vRequiredTravelKmh } = args;
   const { qaT } = criticalTireLoadTonnes({
     tareKg: unit.tareKg,
     payloadKg: unit.payloadKg,
@@ -201,6 +233,13 @@ export function buildHd785Row(args: {
   const vTravel = workAvgToTravel(vWork, travelFraction);
   const payloadT = unit.payloadKg / 1000;
   const targetT = unit.targetKg / 1000;
+  // Kecepatan OPTIMAL HD785 (produksi in-pit) + perlambatan overload terhadap "pas" (91 t).
+  const opt = optimalSpeed({
+    vRequiredTravelKmh,
+    payloadT,
+    pasCapacityT: params.hd785PayloadCapacityTon,
+    ceilingKmh: HD785_SPEED_CEILING_KMH,
+  });
   return {
     id: unit.id,
     model: unit.model,
@@ -215,8 +254,12 @@ export function buildHd785Row(args: {
     overTarget: unit.payloadKg > unit.targetKg,
     reason: reasonText(payloadT, targetT, vTravel),
     zoneCondition: "normal", // diisi getSpeedOverview dari kondisi jalan zona "site" (item 7)
+    optimalSpeedKmh: opt.optimalKmh,
+    dangerCeilingKmh: HD785_SPEED_CEILING_KMH,
+    overloaded: opt.overloaded,
     actualSpeedKmh: null, // diisi getSpeedOverview dari telemetri GPS
     actualStatus: "none",
+    actualViolation: "ok",
   };
 }
 
@@ -245,6 +288,17 @@ export function computeSpeedModel(input: SpeedModelInput): SpeedOverview {
     effectiveWorkHoursPerDay: params.effectiveWorkHoursPerDay,
     fixedTimeHours: params.fixedTimeHours,
     oneWayKm: params.oneWayKm,
+  });
+
+  // Rantai produksi HD785 in-pit (Revisi item 2) — kecepatan optimal HD785 dari target & armadanya.
+  const hd785PayloadPerUnitTon = mean(hd785Units.map((u) => u.payloadKg / 1000), params.hd785PayloadCapacityTon);
+  const hd785Prod = productionSpeed({
+    dailyTargetTon: params.hd785DailyTargetTon,
+    payloadPerUnitTon: params.hd785PayloadCapacityTon, // basis "pas" (overload menurunkan per unit)
+    unitCount: params.hd785UnitCount,
+    effectiveWorkHoursPerDay: params.hd785EffectiveWorkHoursPerDay,
+    fixedTimeHours: params.hd785FixedTimeHours,
+    oneWayKm: params.hd785OneWayKm,
   });
 
   const representativeQaT = criticalTireLoadTonnes({
@@ -285,6 +339,7 @@ export function computeSpeedModel(input: SpeedModelInput): SpeedOverview {
         params,
         vmKmh,
         vRequiredWorkKmh: prod.vRequiredWorkKmh,
+        vRequiredTravelKmh: prod.vRequiredTravelKmh,
         travelFraction: prod.travelFraction,
       }),
     )
@@ -296,7 +351,8 @@ export function computeSpeedModel(input: SpeedModelInput): SpeedOverview {
         unit: u,
         catalogTkph: catalogFor(catalog, u.tireModel),
         params,
-        travelFraction: prod.travelFraction,
+        travelFraction: hd785Prod.travelFraction,
+        vRequiredTravelKmh: hd785Prod.vRequiredTravelKmh,
       }),
     )
     .sort((a, b) => a.vmaxSafeWorkKmh - b.vmaxSafeWorkKmh);
@@ -307,6 +363,7 @@ export function computeSpeedModel(input: SpeedModelInput): SpeedOverview {
     vmKmh: roundKmh(vmKmh),
     fleetInputs: { unitCount, payloadPerUnitTon, avgTareKg, avgCatalogTkph: avgCatalog },
     production: { ...prod, payloadPerUnitTon, unitCount },
+    hd785Production: { ...hd785Prod, payloadPerUnitTon: hd785PayloadPerUnitTon, unitCount: params.hd785UnitCount },
     fleet: {
       representativeQaT: round1(representativeQaT),
       representativeTkphTire: Math.round(representativeTkphTire),
@@ -441,13 +498,23 @@ function clampRowCeiling<T extends { vmaxSafeWorkKmh: number; vmaxSafeTravelKmh:
   return { ...row, vmaxSafeWorkKmh: work, vmaxSafeTravelKmh: travel };
 }
 
-/** Lampirkan kecepatan AKTUAL GPS + status (vs batas aman SETELAH koreksi zona). Tak ubah rumus TKPH. */
-function attachActual<T extends { vmaxSafeTravelKmh: number; actualSpeedKmh: number | null; actualStatus: SpeedActualStatus }>(
-  row: T,
-  actualKmh: number | undefined,
-): T {
+/** Lampirkan kecepatan AKTUAL GPS + status & level pelanggaran vs KECEPATAN OPTIMAL (perimeter). */
+function attachActual<
+  T extends {
+    optimalSpeedKmh: number;
+    dangerCeilingKmh: number;
+    actualSpeedKmh: number | null;
+    actualStatus: SpeedActualStatus;
+    actualViolation: SpeedViolationLevel;
+  },
+>(row: T, actualKmh: number | undefined): T {
   if (actualKmh === undefined) return row;
-  return { ...row, actualSpeedKmh: actualKmh, actualStatus: actualVsSafeStatus(actualKmh, row.vmaxSafeTravelKmh) };
+  return {
+    ...row,
+    actualSpeedKmh: actualKmh,
+    actualStatus: actualVsSafeStatus(actualKmh, row.optimalSpeedKmh),
+    actualViolation: speedViolationLevel(actualKmh, row.optimalSpeedKmh, row.dangerCeilingKmh),
+  };
 }
 
 export async function getSpeedOverview(): Promise<SpeedOverview> {

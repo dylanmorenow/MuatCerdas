@@ -141,6 +141,13 @@ export interface SpeedParams {
   // — Armada hauling (editable di layar Kecepatan) —
   haulUnitCount: number; // jumlah unit hauling (realita lapangan)
   haulPayloadCapacityTon: number; // kapasitas muatan per unit (2 trailer), ton
+  // — Armada & rantai produksi HD785 in-pit (Revisi item 2) —
+  hd785UnitCount: number; // jumlah unit HD785
+  hd785PayloadCapacityTon: number; // batas muatan "pas" HD785 (overload bila > ini), ton
+  hd785DailyTargetTon: number; // target produksi harian HD785 (ton/hari)
+  hd785EffectiveWorkHoursPerDay: number; // jam kerja efektif HD785/hari
+  hd785FixedTimeHours: number; // waktu diam per siklus in-pit (jam)
+  hd785OneWayKm: number; // jarak satu arah in-pit (km)
 }
 
 /** Entri katalog TKPH per model ban (§C.2). Nilai WAJIB DICARI dari brosur pabrik. */

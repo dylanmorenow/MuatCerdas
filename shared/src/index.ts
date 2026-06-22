@@ -28,3 +28,4 @@ export * from "./speed/productionSpeed"; // §C.4–§C.5
 export * from "./speed/decision"; // §C.6
 export * from "./speed/groundSpeed"; // kecepatan aktual GPS + kedekatan hazard
 export * from "./speed/ceiling"; // batas atas absolut (clamp) per kategori unit
+export * from "./speed/optimal"; // kecepatan optimal (produksi) + perlambatan overload + level pelanggaran

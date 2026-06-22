@@ -18,6 +18,7 @@ export interface MassInputRow {
 
 export interface MassMonitoring {
   hd785: MassInputRow[];
+  haul: MassInputRow[];
   todayCoalT: number;
   todayOverburdenT: number;
   reportsToday: number;

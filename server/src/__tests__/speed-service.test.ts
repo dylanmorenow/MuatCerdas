@@ -57,6 +57,7 @@ describe("computeSpeedModel (Modul C, MURNI tanpa DB)", () => {
       params: defaultSpeedParams,
       vmKmh: 23,
       vRequiredWorkKmh: 20,
+      vRequiredTravelKmh: 24,
       travelFraction: 0.85,
     });
     expect(row.catalogTkph).toBe(110); // DEFAULT_TKPH_FALLBACK

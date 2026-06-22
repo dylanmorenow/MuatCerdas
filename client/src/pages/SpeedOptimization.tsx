@@ -9,8 +9,9 @@ import {
   decideSpeed,
   roadOpsConditionLabel,
   ROAD_OPS_CONDITIONS,
-  clampSpeedKmh,
+  optimalSpeed,
   HAUL_SPEED_CEILING_KMH,
+  HD785_SPEED_CEILING_KMH,
   type SpeedParams,
   type RoadOpsCondition,
   type SpeedActualStatus,
@@ -63,9 +64,28 @@ export function SpeedOptimization() {
   const repTkphTire = tkphTire(fi.avgCatalogTkph, form.tempCorrectionFactor, form.siteCorrectionFactor);
   const vmaxWork = vmaxSafeWorkKmh(repTkphTire, repQa);
   const vmaxTravel = workAvgToTravel(vmaxWork, prod.travelFraction);
-  // Rekomendasi yang DITAMPILKAN ke driver dipotong ke batas atas absolut hauling (output clamp).
-  // decideSpeed di bawah tetap memakai nilai dinamis (vmaxWork/vmaxTravel) — keputusan tak berubah.
-  const vmaxTravelCapped = clampSpeedKmh(vmaxTravel, HAUL_SPEED_CEILING_KMH);
+  // Kecepatan OPTIMAL hauling (produksi pada beban pas) — yang ditampilkan ke driver.
+  const optimalTravel = optimalSpeed({
+    vRequiredTravelKmh: prod.vRequiredTravelKmh,
+    payloadT: haulPayloadTon,
+    pasCapacityT: form.haulPayloadCapacityTon,
+    ceilingKmh: HAUL_SPEED_CEILING_KMH,
+  }).optimalKmh;
+  // Rantai produksi HD785 in-pit (item 2) — recompute LIVE untuk seksi HD785.
+  const hd785Prod = productionSpeed({
+    dailyTargetTon: form.hd785DailyTargetTon,
+    payloadPerUnitTon: form.hd785PayloadCapacityTon,
+    unitCount: form.hd785UnitCount,
+    effectiveWorkHoursPerDay: form.hd785EffectiveWorkHoursPerDay,
+    fixedTimeHours: form.hd785FixedTimeHours,
+    oneWayKm: form.hd785OneWayKm,
+  });
+  const hd785OptimalTravel = optimalSpeed({
+    vRequiredTravelKmh: hd785Prod.vRequiredTravelKmh,
+    payloadT: form.hd785PayloadCapacityTon,
+    pasCapacityT: form.hd785PayloadCapacityTon,
+    ceilingKmh: HD785_SPEED_CEILING_KMH,
+  }).optimalKmh;
   const decision = decideSpeed({
     vRequiredWorkKmh: prod.vRequiredWorkKmh,
     vmaxSafeWorkKmh: vmaxWork,
@@ -169,10 +189,13 @@ export function SpeedOptimization() {
         {/* Form editable */}
         <div className="space-y-5 lg:col-span-2">
           <Card>
-            <h2 className="mb-3 font-semibold text-slate-800">
-              Target produksi & armada
-              <InfoTip text="Dari target produksi dihitung kecepatan yang dibutuhkan, lewat waktu satu siklus angkut. Jumlah unit dan kapasitas bisa diubah sesuai realita lapangan." />
-            </h2>
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <h2 className="font-semibold text-slate-800">
+                Target produksi & armada — Hauling
+                <InfoTip text="Dari target produksi dihitung kecepatan optimal yang diperlukan, lewat waktu satu siklus angkut. Jumlah unit dan kapasitas bisa diubah sesuai realita lapangan." />
+              </h2>
+              <SectionSave dirty={dirty} pending={save.isPending} onSave={() => save.mutate(form)} onRevert={() => setForm(data.params)} />
+            </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <NumberField label="Jumlah unit hauling" value={form.haulUnitCount} onChange={(v) => set("haulUnitCount", v)} hint="realita lapangan" />
               <NumberField label="Kapasitas per unit" unit="ton" value={form.haulPayloadCapacityTon} onChange={(v) => set("haulPayloadCapacityTon", v)} hint="2 trailer" />
@@ -213,10 +236,10 @@ export function SpeedOptimization() {
         <div className="space-y-4">
           {/* Pakai <div> (bukan Card) agar bg-kpp-green tak bertabrakan dgn bg-white bawaan Card → teks putih tetap terlihat. */}
           <div className="rounded-xl border border-emerald-800/30 bg-kpp-green p-5 text-white shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan aman untuk driver (aktual GPS)</div>
-            <div className="mt-1 text-3xl font-bold text-white">{kmh(vmaxTravelCapped)}</div>
+            <div className="text-xs uppercase tracking-wide text-emerald-100">Kecepatan optimal untuk driver (aktual GPS)</div>
+            <div className="mt-1 text-3xl font-bold text-white">{kmh(optimalTravel)}</div>
             <div className="mt-1 text-xs text-emerald-50">
-              kecepatan aktual maksimum (dibaca GPS), dibatasi {HAUL_SPEED_CEILING_KMH} km/jam untuk truk hauling.
+              kecepatan optimal yang diperlukan dari target produksi. Kecepatan batas bahaya {HAUL_SPEED_CEILING_KMH} km/jam untuk truk hauling.
             </div>
             <div className="mt-3 border-t border-white/30 pt-3 text-sm text-emerald-50">
               {conflict
@@ -257,8 +280,8 @@ export function SpeedOptimization() {
                 <th className="px-4 py-2.5 font-medium">Muatan</th>
                 <th className="px-4 py-2.5 font-medium">Beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Beban vs batas</th>
-                <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
-                <th className="px-4 py-2.5 font-medium">Maks aman (aktual)</th>
+                <th className="px-4 py-2.5 font-medium">Kecepatan optimal</th>
+                <th className="px-4 py-2.5 font-medium">Batas bahaya</th>
                 <th className="px-4 py-2.5 font-medium">Aktual (GPS)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
@@ -270,6 +293,30 @@ export function SpeedOptimization() {
             </tbody>
           </table>
         </div>
+      </Card>
+
+      {/* Target produksi & armada — HD785 (Revisi item 2) */}
+      <Card className="mt-5">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <h2 className="font-semibold text-slate-800">
+            Target produksi & armada — HD785
+            <InfoTip text="Sama seperti hauling, tapi untuk HD785 in-pit. Kecepatan optimal HD785 dihitung dari target & armadanya; overload (muatan > kapasitas pas) menurunkan optimal demi ban. Batas bahaya 50 km/jam." />
+          </h2>
+          <SectionSave dirty={dirty} pending={save.isPending} onSave={() => save.mutate(form)} onRevert={() => setForm(data.params)} />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <NumberField label="Jumlah unit HD785" value={form.hd785UnitCount} onChange={(v) => set("hd785UnitCount", v)} />
+          <NumberField label="Kapasitas pas per unit" unit="ton" value={form.hd785PayloadCapacityTon} onChange={(v) => set("hd785PayloadCapacityTon", v)} hint="overload bila lebih" />
+          <NumberField label="Target harian HD785" unit="ton/hari" value={form.hd785DailyTargetTon} onChange={(v) => set("hd785DailyTargetTon", v)} />
+          <NumberField label="Jam kerja efektif" unit="jam/hari" value={form.hd785EffectiveWorkHoursPerDay} onChange={(v) => set("hd785EffectiveWorkHoursPerDay", v)} />
+          <NumberField label="Waktu diam per siklus" unit="jam" step={0.05} value={form.hd785FixedTimeHours} onChange={(v) => set("hd785FixedTimeHours", v)} hint="muat, bongkar, manuver" />
+          <NumberField label="Jarak satu arah in-pit" unit="km" value={form.hd785OneWayKm} onChange={(v) => set("hd785OneWayKm", v)} />
+        </div>
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500 sm:grid-cols-3">
+          <Mini label="Ritase per unit per hari" value={formatNumber(hd785Prod.tripsPerUnitPerDay, 1)} />
+          <Mini label="Kecepatan perlu (saat jalan)" value={kmh(hd785Prod.vRequiredTravelKmh)} />
+          <Mini label="Kecepatan optimal HD785" value={kmh(hd785OptimalTravel)} />
+        </dl>
       </Card>
 
       {/* Panel HD785 ringkas */}
@@ -289,8 +336,8 @@ export function SpeedOptimization() {
                 <th className="px-4 py-2.5 font-medium">Muatan vs target</th>
                 <th className="px-4 py-2.5 font-medium">Beban ban</th>
                 <th className="px-4 py-2.5 font-medium">Batas beban ban</th>
-                <th className="px-4 py-2.5 font-medium">Maks (rata-rata)</th>
-                <th className="px-4 py-2.5 font-medium">Maks aman (aktual)</th>
+                <th className="px-4 py-2.5 font-medium">Kecepatan optimal</th>
+                <th className="px-4 py-2.5 font-medium">Batas bahaya</th>
                 <th className="px-4 py-2.5 font-medium">Aktual (GPS)</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
@@ -332,8 +379,10 @@ function UnitRow({ u }: { u: SpeedUnitRow }) {
       </td>
       <td className="px-4 py-2.5 text-slate-600">{ton(u.qaT)}</td>
       <td className="px-4 py-2.5 text-slate-600">{formatNumber(u.tkphSite, 0)} / {formatNumber(u.tkphTire, 0)}</td>
-      <td className="px-4 py-2.5 text-slate-600">{kmh(u.vmaxSafeWorkKmh)}</td>
-      <td className="px-4 py-2.5 font-medium text-slate-800">{kmh(u.vmaxSafeTravelKmh)}</td>
+      <td className="px-4 py-2.5 font-medium text-slate-800">
+        {kmh(u.optimalSpeedKmh)} {u.overloaded && <Badge tone="amber">overload</Badge>}
+      </td>
+      <td className="px-4 py-2.5 text-slate-500">{kmh(u.dangerCeilingKmh)}</td>
       <ActualCell kmh={u.actualSpeedKmh} status={u.actualStatus} />
       <td className="px-4 py-2.5">
         {u.exceedsRequired ? <Badge tone="red">di atas batas</Badge> : <Badge tone="green">aman</Badge>}
@@ -357,13 +406,45 @@ function Hd785Row({ u }: { u: Hd785SpeedRow }) {
       <td className="px-4 py-2.5 text-slate-600">{ton(u.payloadT)} / {ton(u.targetT)}</td>
       <td className="px-4 py-2.5 text-slate-600">{ton(u.qaT)}</td>
       <td className="px-4 py-2.5 text-slate-600">{formatNumber(u.tkphTire, 0)}</td>
-      <td className="px-4 py-2.5 text-slate-600">{kmh(u.vmaxSafeWorkKmh)}</td>
-      <td className="px-4 py-2.5 font-medium text-slate-800">{kmh(u.vmaxSafeTravelKmh)}</td>
+      <td className="px-4 py-2.5 font-medium text-slate-800">
+        {kmh(u.optimalSpeedKmh)} {u.overloaded && <Badge tone="amber">overload</Badge>}
+      </td>
+      <td className="px-4 py-2.5 text-slate-500">{kmh(u.dangerCeilingKmh)}</td>
       <ActualCell kmh={u.actualSpeedKmh} status={u.actualStatus} />
       <td className="px-4 py-2.5">
         {u.overTarget ? <Badge tone="amber">overload</Badge> : <Badge tone="green">ok</Badge>}
       </td>
     </tr>
+  );
+}
+
+/** Tombol simpan/batalkan per bagian (top-right). Revert mengembalikan perubahan yang belum disimpan. */
+function SectionSave({
+  dirty,
+  pending,
+  onSave,
+  onRevert,
+}: {
+  dirty: boolean;
+  pending: boolean;
+  onSave: () => void;
+  onRevert: () => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {dirty && (
+        <button onClick={onRevert} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs hover:bg-slate-50">
+          Batalkan
+        </button>
+      )}
+      <button
+        onClick={onSave}
+        disabled={!dirty || pending}
+        className="rounded-md bg-kpp-green px-3 py-1 text-xs font-medium text-white hover:bg-kpp-green/90 disabled:opacity-40"
+      >
+        {pending ? "Menyimpan…" : dirty ? "Simpan" : "Tersimpan"}
+      </button>
+    </div>
   );
 }
 

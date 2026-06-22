@@ -103,7 +103,7 @@ export function MassReportForm({
     const r = await enqueue("/api/mass", body);
     setBusy(false);
     if (r.sent) {
-      setMsg({ tone: "ok", text: "Terkirim ke surveyor ✓" });
+      setMsg({ tone: "ok", text: "Laporan terkirim ✓" });
       reset();
       void qc.invalidateQueries({ queryKey: ["mass-monitoring"] });
       void qc.invalidateQueries({ queryKey: ["operator-data"] });
@@ -244,7 +244,7 @@ export function MassReportForm({
             disabled={busy}
             className="rounded-lg bg-kpp-green px-5 py-2.5 text-base font-semibold text-white hover:bg-kpp-green/90 disabled:opacity-50"
           >
-            {busy ? "Mengirim…" : offline ? "Simpan (offline)" : "Kirim ke surveyor"}
+            {busy ? "Mengirim…" : offline ? "Simpan (offline)" : "Laporkan"}
           </button>
           {msg && (
             <span

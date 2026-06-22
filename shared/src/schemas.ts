@@ -114,6 +114,12 @@ export const speedParamsSchema = z.object({
   dailyTargetTon: z.number().positive(),
   haulUnitCount: z.number().int().positive(),
   haulPayloadCapacityTon: z.number().positive(),
+  hd785UnitCount: z.number().int().positive(),
+  hd785PayloadCapacityTon: z.number().positive(),
+  hd785DailyTargetTon: z.number().positive(),
+  hd785EffectiveWorkHoursPerDay: z.number().positive(),
+  hd785FixedTimeHours: z.number().nonnegative(),
+  hd785OneWayKm: z.number().positive(),
 });
 
 export const opsParamsSchema = z.object({

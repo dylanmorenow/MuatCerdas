@@ -3,10 +3,10 @@
 
 import {
   classifyPayload,
-  actualVsSafeStatus,
   hazardProximity,
   type PayloadStatus,
   type SpeedActualStatus,
+  type SpeedViolationLevel,
   type HazardProximity,
 } from "@muatcerdas/shared";
 import { prisma } from "../db";
@@ -15,6 +15,7 @@ import { getTireUnitDetail } from "./tire";
 import { getCalibrationHealth } from "./payload";
 import { getRoadMap, type RoadMapData } from "./roadmap";
 import { getFleetTelemetry } from "./telemetry";
+import { getCoalTargetForDate, dateKey } from "./coalTarget";
 
 export interface DriverBundle {
   unit: { id: string; model: string; category: string };
@@ -48,7 +49,13 @@ export interface DriverBundle {
     progressKm: number;
     routeLengthKm: number;
     actualStatus: SpeedActualStatus;
-    vmaxSafeTravelKmh: number | null;
+    /** Kecepatan OPTIMAL yang diperlukan (produksi, overload-adjust). */
+    optimalSpeedKmh: number | null;
+    /** Batas bahaya absolut unit (45 hauling / 50 HD785). */
+    dangerCeilingKmh: number | null;
+    /** Level pelanggaran: ok / over_optimal / danger. */
+    violation: SpeedViolationLevel;
+    overloaded: boolean;
     capturedAt: string;
   } | null;
   /** Kedekatan ke bahaya peta jalan, digerakkan posisi GPS. */
@@ -113,22 +120,29 @@ export async function getDriverBundle(unitId: string): Promise<DriverBundle> {
 
   const params = speedOverview.params;
   const fleetUnitCount = speedOverview.fleetInputs.unitCount || 1;
+  // Item 7: operator mengikuti target produksi pada JADWAL HARIAN hari ini (persist sampai diubah /
+  // hari terlewati). Bila tanggal hari ini belum disetel, pakai target default SpeedParams.
+  const calendarTargetTon = await getCoalTargetForDate(dateKey(new Date()));
+  const dailyTargetTon = calendarTargetTon ?? params.dailyTargetTon;
   const production = {
-    dailyTargetTon: params.dailyTargetTon,
-    unitShareTon: Math.round(params.dailyTargetTon / fleetUnitCount),
+    dailyTargetTon,
+    unitShareTon: Math.round(dailyTargetTon / fleetUnitCount),
     perTripPayloadT: speedRow?.payloadT ?? 0,
   };
 
-  // Kecepatan AKTUAL GPS + kedekatan bahaya (digerakkan posisi GPS). Sumber: telemetri (simulasi GNSS).
+  // Kecepatan AKTUAL GPS + kedekatan bahaya (digerakkan posisi GPS). Status & optimal dari speedRow
+  // (sudah dihitung getSpeedOverview: perimeter = kecepatan OPTIMAL, bukan batas ban).
   const tel = telemetryMap.get(unitId);
-  const vmaxTravel = speedRow?.vmaxSafeTravelKmh ?? null;
   const telemetry = tel
     ? {
         groundSpeedKmh: tel.groundSpeedKmh,
         progressKm: tel.progressKm,
         routeLengthKm: tel.routeLengthKm,
-        actualStatus: vmaxTravel != null ? actualVsSafeStatus(tel.groundSpeedKmh, vmaxTravel) : ("none" as SpeedActualStatus),
-        vmaxSafeTravelKmh: vmaxTravel,
+        actualStatus: (speedRow?.actualStatus ?? "none") as SpeedActualStatus,
+        optimalSpeedKmh: speedRow?.optimalSpeedKmh ?? null,
+        dangerCeilingKmh: speedRow?.dangerCeilingKmh ?? null,
+        violation: (speedRow?.actualViolation ?? "ok") as SpeedViolationLevel,
+        overloaded: speedRow?.overloaded ?? false,
         capturedAt: tel.capturedAt,
       }
     : null;

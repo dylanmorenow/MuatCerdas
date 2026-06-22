@@ -1,6 +1,6 @@
 // Hook Modul D — surface driver (data unit sendiri).
 import { useQuery } from "@tanstack/react-query";
-import type { SpeedActualStatus, HazardProximity } from "@muatcerdas/shared";
+import type { SpeedActualStatus, SpeedViolationLevel, HazardProximity } from "@muatcerdas/shared";
 import { apiGet } from "./client";
 import type { RoadMapData } from "./roadmap";
 
@@ -30,7 +30,10 @@ export interface DriverBundle {
     progressKm: number;
     routeLengthKm: number;
     actualStatus: SpeedActualStatus;
-    vmaxSafeTravelKmh: number | null;
+    optimalSpeedKmh: number | null;
+    dangerCeilingKmh: number | null;
+    violation: SpeedViolationLevel;
+    overloaded: boolean;
     capturedAt: string;
   } | null;
   hazardAhead: HazardProximity | null;

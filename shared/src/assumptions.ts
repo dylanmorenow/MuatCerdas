@@ -55,6 +55,13 @@ export const defaultSpeedParams: SpeedParams = {
   dailyTargetTon: 100_000, // target produksi harian (realita lapangan), editable
   haulUnitCount: 90, // jumlah unit hauling, editable
   haulPayloadCapacityTon: 120, // kapasitas 2 trailer per unit (ton), editable
+  // — Armada & produksi HD785 in-pit (Revisi item 2), semua ASUMSI editable —
+  hd785UnitCount: 12,
+  hd785PayloadCapacityTon: 91, // muatan "pas" HD785 (overload bila > 91 t)
+  hd785DailyTargetTon: 40_000,
+  hd785EffectiveWorkHoursPerDay: 20,
+  hd785FixedTimeHours: 0.3, // siklus in-pit lebih pendek (loading+dumping+manuver)
+  hd785OneWayKm: 3, // jarak satu arah in-pit
 };
 
 /**

@@ -6,7 +6,6 @@ import {
   fitTireModel,
   predictRemainingLife,
   attributeWear,
-  tireAvoidableCost,
   cyclesRemaining as cyclesRemainingFn,
   gradeCounts,
   worstGrade,
@@ -515,16 +514,10 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
     );
     const shortfall = attr.shortfallKm;
 
-    // Penghematan tertangkap per unit bila umur naik dari prediksi → best-practice.
-    const perUnit = tireAvoidableCost({
-      ...ctx.costParams,
-      tireLifeActualKm: Math.max(1, summary.predictedLifeKm),
-      tireLifeBestKm: u.tireLifeBestKm,
-      tirePriceIdr: u.tirePriceIdr,
-      kmPerYear: u.kmPerYear,
-      fleetSize: 1,
-    });
-    const capturedPerUnit = Math.max(0, perUnit.capturedPerUnit);
+    // Item 8: umur ban TIDAK PERNAH bertambah. Penghematan = biaya umur ban yang DICEGAH HILANG
+    // (km umur yang terbuang akibat kejadian mengemudi), bukan asumsi umur naik ke best-practice.
+    const costPerKm = u.tirePriceIdr / Math.max(1, u.tireLifeBestKm);
+    const capturedPerUnit = Math.max(0, summary.extraWearKm * costPerKm * ctx.costParams.tiresPerUnit);
 
     // Rekomendasi penggantian bila sisa umur kritis.
     if (summary.status === "critical") {

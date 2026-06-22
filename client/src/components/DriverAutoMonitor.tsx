@@ -4,7 +4,7 @@
 // Bukan tombol manual; sistem dianggap sudah terintegrasi membaca GPS.
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hazardLabel, type SpeedActualStatus, type HazardProximity } from "@muatcerdas/shared";
+import { hazardLabel, type SpeedViolationLevel, type HazardProximity } from "@muatcerdas/shared";
 import { useOfflineQueue } from "../lib/useOfflineQueue";
 
 const COOLDOWN_MS = 60_000; // jeda minimal antar kejadian sejenis agar tak membanjiri
@@ -13,15 +13,17 @@ const HARD_BRAKE_DROP_KMH = 12; // penurunan kecepatan antar pembacaan yang dian
 export function DriverAutoMonitor({
   unitId,
   groundSpeedKmh,
-  actualStatus,
-  vmaxKmh,
+  violation,
+  optimalKmh,
+  dangerKmh,
   hazard,
   capturedAt,
 }: {
   unitId: string;
   groundSpeedKmh: number | null;
-  actualStatus: SpeedActualStatus;
-  vmaxKmh: number | null;
+  violation: SpeedViolationLevel;
+  optimalKmh: number | null;
+  dangerKmh: number | null;
   hazard: HazardProximity | null;
   capturedAt: string | null;
 }) {
@@ -44,11 +46,16 @@ export function DriverAutoMonitor({
       void qc.invalidateQueries({ queryKey: ["tire-recs"] });
     };
 
-    // 1) Ngebut: kecepatan aktual di atas batas aman.
-    if (actualStatus === "over" && vmaxKmh != null) {
+    // 1) Pelanggaran kecepatan: bahaya (di atas batas aman) atau di atas kecepatan optimal.
+    if (violation === "danger" && dangerKmh != null) {
       void fire(
         "overspeed",
-        `Kecepatan aktual ${Math.round(groundSpeedKmh)} km/jam di atas batas aman ${Math.round(vmaxKmh)} km/jam`,
+        `Kecepatan aktual ${Math.round(groundSpeedKmh)} km/jam di atas batas bahaya ${Math.round(dangerKmh)} km/jam`,
+      );
+    } else if (violation === "over_optimal" && optimalKmh != null) {
+      void fire(
+        "overspeed",
+        `Kecepatan aktual ${Math.round(groundSpeedKmh)} km/jam di atas kecepatan optimal ${Math.round(optimalKmh)} km/jam`,
       );
     }
     // 2) Rem mendadak: kecepatan turun drastis antar pembacaan GPS.
@@ -63,7 +70,7 @@ export function DriverAutoMonitor({
     }
     lastHazardStatus.current = hazard?.status ?? "clear";
     prevSpeed.current = groundSpeedKmh;
-  }, [capturedAt, groundSpeedKmh, actualStatus, vmaxKmh, hazard, unitId, enqueue, qc]);
+  }, [capturedAt, groundSpeedKmh, violation, optimalKmh, dangerKmh, hazard, unitId, enqueue, qc]);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
