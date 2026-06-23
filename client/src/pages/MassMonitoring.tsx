@@ -1,7 +1,7 @@
 // Pemantauan Muatan (surveyor) — laporan massa real-time per HD785 (massa + material coal/OB +
 // nama operator excavator) dari input operator.
 import { formatNumber, formatTon, materialLabel, classifyPayload, type PayloadStatus } from "@muatcerdas/shared";
-import { useMassMonitoring, useOperatorData, type MassInputRow } from "../api/mass";
+import { useMassMonitoring } from "../api/mass";
 import { PageHeader, Card, Stat, Badge, Loading, ErrorState, InfoTip } from "../components/ui";
 
 const TARGET_KG = 91_000; // HD785
@@ -22,7 +22,6 @@ function timeAgo(iso: string): string {
 
 export function MassMonitoring() {
   const { data, isLoading, error, refetch } = useMassMonitoring();
-  const { data: opData } = useOperatorData();
 
   return (
     <>
@@ -110,7 +109,6 @@ export function MassMonitoring() {
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">Unit</th>
-                    <th className="px-4 py-2.5 font-medium">Bucket 1 + 2</th>
                     <th className="px-4 py-2.5 font-medium">Total muatan</th>
                     <th className="px-4 py-2.5 font-medium">Status</th>
                     <th className="px-4 py-2.5 font-medium">Pelapor</th>
@@ -120,7 +118,7 @@ export function MassMonitoring() {
                 <tbody className="divide-y divide-slate-100">
                   {data.haul.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                      <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
                         Belum ada laporan. Operator truk hauling mengirimnya dari halaman driver.
                       </td>
                     </tr>
@@ -130,11 +128,6 @@ export function MassMonitoring() {
                     return (
                       <tr key={r.id} className="hover:bg-slate-50">
                         <td className="px-4 py-2.5 font-medium text-slate-700">{r.unitId}</td>
-                        <td className="px-4 py-2.5 text-slate-500">
-                          {r.bucket1T != null || r.bucket2T != null
-                            ? `${formatNumber(r.bucket1T ?? 0, 1)} + ${formatNumber(r.bucket2T ?? 0, 1)} t`
-                            : "-"}
-                        </td>
                         <td className="px-4 py-2.5 font-medium text-slate-800">{formatTon(r.totalT * 1000)}</td>
                         <td className="px-4 py-2.5">
                           <Badge tone={st.tone}>{st.label}</Badge>
@@ -148,53 +141,9 @@ export function MassMonitoring() {
               </table>
             </div>
           </Card>
-
-          {/* Data operator per jenis — section massa HD785 dihapus (redundan dgn tabel real-time di atas) */}
-          {opData && opData.groups.filter((g) => g.key !== "hd785-mass").length > 0 && (
-            <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {opData.groups
-                .filter((g) => g.key !== "hd785-mass")
-                .map((g) => (
-                  <Card key={g.key} className="overflow-hidden p-0">
-                    <div className="border-b border-slate-200 px-5 py-3">
-                      <h2 className="font-semibold text-slate-800">{g.label}</h2>
-                      <p className="text-xs text-slate-400">{g.rows.length} laporan</p>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      <table className="w-full text-sm">
-                        <tbody className="divide-y divide-slate-100">
-                          {g.rows.slice(0, 20).map((r) => (
-                            <OperatorRow key={r.id} r={r} />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </Card>
-                ))}
-            </div>
-          )}
         </>
       )}
     </>
-  );
-}
-
-function OperatorRow({ r }: { r: MassInputRow }) {
-  const buckets = r.bucket1T != null || r.bucket2T != null;
-  return (
-    <tr className="hover:bg-slate-50">
-      <td className="px-4 py-2 font-medium text-slate-700">{r.unitId}</td>
-      <td className="px-4 py-2 text-slate-600">{materialLabel(r.material as "coal" | "overburden" | null)}</td>
-      <td className="px-4 py-2 text-slate-800">
-        {formatTon(r.totalT * 1000)}
-        {buckets && (
-          <span className="ml-1 text-xs text-slate-400">
-            ({formatNumber(r.bucket1T ?? 0, 1)} + {formatNumber(r.bucket2T ?? 0, 1)})
-          </span>
-        )}
-      </td>
-      <td className="px-4 py-2 text-slate-500">{r.excavatorOperator ?? r.operatorName}</td>
-    </tr>
   );
 }
 

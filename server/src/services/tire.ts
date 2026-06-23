@@ -505,6 +505,7 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
     resolvedKeySet(),
   ]);
   const recs: RecDraft[] = [];
+  const annualLossByUnit: Record<string, number> = {}; // batas atas kerugian/tahun per unit (anti dobel-hitung)
 
   for (const u of ctx.units) {
     const summary = summaryFor(u, ctx.model);
@@ -514,10 +515,14 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
     );
     const shortfall = attr.shortfallKm;
 
-    // Item 8: umur ban TIDAK PERNAH bertambah. Penghematan = biaya umur ban yang DICEGAH HILANG
-    // (km umur yang terbuang akibat kejadian mengemudi), bukan asumsi umur naik ke best-practice.
-    const costPerKm = u.tirePriceIdr / Math.max(1, u.tireLifeBestKm);
-    const capturedPerUnit = Math.max(0, summary.extraWearKm * costPerKm * ctx.costParams.tiresPerUnit);
+    // "Kerugian per tahun bila dibiarkan" (Revisi #3): biaya TAHUNAN akibat ban aus lebih cepat dari
+    // umur idealnya → lebih sering ganti ban/tahun. Ini biaya dari masalah keausan dini yang SEDANG
+    // terjadi; BUKAN asumsi umur ban bisa ditambah (Item 8) — umur unit tetap hanya bisa turun.
+    const predicted = Math.max(1, summary.predictedLifeKm);
+    const ideal = Math.max(predicted, u.tireLifeBestKm); // ideal ≥ prediksi (umur unit tak pernah naik)
+    const extraTiresPerYear = u.kmPerYear * Math.max(0, 1 / predicted - 1 / ideal); // per posisi ban
+    const capturedPerUnit = Math.max(0, Math.round(extraTiresPerYear * ctx.costParams.tiresPerUnit * u.tirePriceIdr));
+    annualLossByUnit[u.id] = capturedPerUnit;
 
     // Rekomendasi penggantian bila sisa umur kritis.
     if (summary.status === "critical") {
@@ -593,6 +598,16 @@ export async function getTireRecommendations(): Promise<TireRecommendation[]> {
         grade: worstGrade(gradeCounts(ev.hazardTypes)) ?? "A",
       });
     }
+  }
+
+  // Anti dobel-hitung (Revisi #3): jumlah kerugian semua tindakan satu unit tidak boleh melebihi
+  // kerugian/tahun unit itu. Bila melebihi, skala turun proporsional sehingga totalnya = kerugian/tahun.
+  const sumLossByUnit: Record<string, number> = {};
+  for (const r of recs) sumLossByUnit[r.unitId] = (sumLossByUnit[r.unitId] ?? 0) + r.estimatedSavingsIdr;
+  for (const r of recs) {
+    const cap = annualLossByUnit[r.unitId] ?? 0;
+    const sum = sumLossByUnit[r.unitId] ?? 0;
+    if (sum > cap && sum > 0) r.estimatedSavingsIdr = Math.round((r.estimatedSavingsIdr / sum) * cap);
   }
 
   // Lengkapi kunci tindakan + buang yang sudah ditandai selesai (ADMIN-5).
